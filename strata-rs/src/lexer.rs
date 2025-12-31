@@ -187,6 +187,77 @@ impl<'a> Lexer<'a> {
         Some(Token::Bytes(bytes))
     }
 
+    fn lex_string(&mut self) -> Option<Token> {
+        // must start with "
+        if self.peek() != Some(b'"') {
+            return None;
+        }
+
+        //consume "
+        self.pos += 1;
+
+        let mut out = String::new();
+
+        while let Some(b) = self.peek() {
+            match b {
+                b'"' => {
+                    // closing quote
+                    self.pos += 1;
+                    return Some(Token::String(out));
+                }
+
+                b'\\' => {
+                    //escape seq
+                    self.pos += 1;
+                    let esc = self.peek()?;
+                    self.pos += 1;
+
+                    match esc {
+                        b'"' => out.push('"'),
+                        b'\\' => out.push('\\'),
+                        b'n' => out.push('\n'),
+                        b'r' => out.push('\r'),
+                        b't' => out.push('\t'),
+
+                        b'u' => {
+                            // \uXXXX
+                            let mut codepoint: u32 = 0;
+
+                            for _ in 0..4 {
+                                let h = self.peek()?;
+                                self.pos += 1;
+                                let v = Self::hex_digit(h)? as u32;
+                                codepoint = (codepoint << 4) | v;
+                            }
+
+                            let ch = char::from_u32(codepoint)?;
+                            out.push(ch);
+                        }
+
+                        _ => return None, // invalid escape
+                    }
+                }
+
+                b'\n' | b'\r' => {
+                    // strings cant span lines
+                    return None;
+                }
+
+                _ => {
+                    // regular UTF-8 byte
+                    if b >= 0x80 {
+                        return None; // non-ASCII not allowed in v1 str
+                    }
+
+                    out.push(b as char);
+                    self.pos += 1;
+                }
+            }
+        }
+
+        None
+    }
+
     pub fn next_token(&mut self) -> Option<Token> {
         self.skip_ignored();
 
@@ -199,6 +270,11 @@ impl<'a> Lexer<'a> {
             b']' => { self.pos += 1; Some(Token::RBracket) }
             b':' => { self.pos += 1; Some(Token::Colon) }
             b',' => { self.pos += 1; Some(Token::Comma) }
+
+            // string literal
+            b'"' => {
+                self.lex_string()
+            }
 
             // bytes literal
             b'0' if self.input.get(self.pos + 1) == Some(&b'x') => {
