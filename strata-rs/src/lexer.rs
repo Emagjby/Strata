@@ -43,6 +43,15 @@ impl<'a> Lexer<'a> {
         Some(b)
     }
 
+    fn hex_digit(b: u8) -> Option<u8> {
+        match b {
+            b'0'..=b'9' => Some(b - b'0'),
+            b'a'..=b'f' => Some(b - b'a' + 10),
+            b'A'..=b'F' => Some(b - b'A' + 10),
+            _ => None,
+        }
+    }
+
     fn skip_ignored(&mut self) {
         loop {
             //skip whitespace
@@ -137,6 +146,47 @@ impl<'a> Lexer<'a> {
         Some(Token::Int(val))
     }
 
+    fn lex_bytes(&mut self) -> Option<Token> {
+        let start = self.pos;
+
+        // must start with 0x
+        if self.peek() != Some(b'0') || self.input.get(self.pos + 1) != Some(&b'x') {
+            return None;
+        }
+
+        // consume 0x
+        self.pos += 2;
+
+        let hex_start = self.pos;
+
+        while let Some(b) = self.peek() {
+            if matches!(b, b'0'..=b'9' | b'a'..=b'f' | b'A'..=b'F') {
+                self.pos += 1;
+            } else {
+                break;
+            }
+        }
+
+        let hex_len = self.pos - hex_start;
+
+        // must have even number of hex digits and at least one byte
+        if hex_len == 0 || hex_len % 2 != 0 {
+            self.pos = start;
+            return None;
+        }
+
+        let hex = &self.input[hex_start..self.pos];
+        let mut bytes = Vec::with_capacity(hex_len / 2);
+
+        for i in (0..hex_len).step_by(2) {
+            let hi = Self::hex_digit(hex[i])?;
+            let lo = Self::hex_digit(hex[i + 1])?;
+            bytes.push((hi << 4) | lo);
+        }
+
+        Some(Token::Bytes(bytes))
+    }
+
     pub fn next_token(&mut self) -> Option<Token> {
         self.skip_ignored();
 
@@ -149,6 +199,11 @@ impl<'a> Lexer<'a> {
             b']' => { self.pos += 1; Some(Token::RBracket) }
             b':' => { self.pos += 1; Some(Token::Colon) }
             b',' => { self.pos += 1; Some(Token::Comma) }
+
+            // bytes literal
+            b'0' if self.input.get(self.pos + 1) == Some(&b'x') => {
+                self.lex_bytes()
+            }
 
             // integer literal
             b'-' | b'0'..=b'9' => {
