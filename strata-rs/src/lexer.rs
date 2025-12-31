@@ -78,6 +78,32 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn lex_identifier(&mut self) -> Token {
+        let start = self.pos;
+
+        // first char is guaranteed to be [A-Za-z_]
+        self.pos += 1;
+
+        while let Some(b) = self.peek() {
+            if matches!(b, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'_') {
+                self.pos += 1;
+            } else {
+                break;
+            }
+        }
+
+        let ident = std::str::from_utf8(&self.input[start..self.pos])
+            .expect("identifier must be valid ASCII")
+            .to_string();
+
+        match ident.as_str() {
+            "null" => Token::Null,
+            "true" => Token::True,
+            "false" => Token::False,
+            _ => Token::Ident(ident),
+        }
+    }
+
     pub fn next_token(&mut self) -> Option<Token> {
         self.skip_ignored();
 
@@ -90,6 +116,10 @@ impl<'a> Lexer<'a> {
             b']' => { self.pos += 1; Some(Token::RBracket) }
             b':' => { self.pos += 1; Some(Token::Colon) }
             b',' => { self.pos += 1; Some(Token::Comma) }
+
+            b'a'..=b'z' | b'A'..=b'Z' | b'_' => {
+                Some(self.lex_identifier())
+            }
 
             _ => {
                 None
