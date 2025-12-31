@@ -37,12 +37,6 @@ impl<'a> Lexer<'a> {
         self.input.get(self.pos).copied()
     }
 
-    fn next(&mut self) -> Option<u8> {
-        let b = self.peek()?;
-        self.pos += 1;
-        Some(b)
-    }
-
     fn hex_digit(b: u8) -> Option<u8> {
         match b {
             b'0'..=b'9' => Some(b - b'0'),
