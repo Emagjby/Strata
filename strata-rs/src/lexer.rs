@@ -104,6 +104,39 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    fn lex_int(&mut self) -> Option<Token> {
+        let start = self.pos;
+
+        // opt leading '-'
+        if self.peek() == Some(b'-') {
+            self.pos += 1;
+        }
+
+        let mut saw_digit = false;
+
+        while let Some(b) = self.peek() {
+            if matches!(b, b'0'..=b'9') {
+                saw_digit = true;
+                self.pos += 1;
+            } else {
+                break;
+            }
+        }
+
+        // must have at least 1 digit
+        if !saw_digit {
+            self.pos = start;
+            return None;
+        }
+
+        let slice = &self.input[start..self.pos];
+        let text = std::str::from_utf8(slice).ok()?;
+
+        let val = text.parse::<i64>().ok()?;
+
+        Some(Token::Int(val))
+    }
+
     pub fn next_token(&mut self) -> Option<Token> {
         self.skip_ignored();
 
@@ -117,6 +150,12 @@ impl<'a> Lexer<'a> {
             b':' => { self.pos += 1; Some(Token::Colon) }
             b',' => { self.pos += 1; Some(Token::Comma) }
 
+            // integer literal
+            b'-' | b'0'..=b'9' => {
+                self.lex_int()
+            } 
+
+            // identifier or keyword
             b'a'..=b'z' | b'A'..=b'Z' | b'_' => {
                 Some(self.lex_identifier())
             }
