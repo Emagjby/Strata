@@ -81,6 +81,65 @@ impl<'a> Parser<'a> {
         Some(Value::List(items))
     }
 
+    fn parse_map(&mut self) -> Option<Value> {
+        // expect '{'
+        if self.lookahead != Some(Token::LBrace) {
+            return None;
+        }
+        self.advance(); // consume '{'
+        
+        let mut map = BTreeMap::new();
+
+        // empty map
+        if self.lookahead == Some(Token::RBrace) {
+            self.advance(); // consume '}'
+            return Some(Value::Map(map));
+        }
+
+        loop {
+            // key must be identifier
+            let key = match self.lookahead.clone()? {
+                Token::Ident(name) => {
+                    self.advance();
+                    name
+                }
+
+                _ => return None,
+            };
+
+            // expect ':'
+            if self.lookahead != Some(Token::Colon) {
+                return None;
+            }
+            self.advance();
+
+            // parse value
+            let value = self.parse_value()?;
+            map.insert(key, value);
+
+            match self.lookahead {
+                Some(Token::Comma) => {
+                    self.advance();
+
+                    // allow trailing comma
+                    if self.lookahead == Some(Token::RBrace) {
+                        break;
+                    }
+                }
+                Some(Token::RBrace) => break,
+                _ => return None,
+            }
+        }
+
+        // consume closing '}'
+        if self.lookahead != Some(Token::RBrace) {
+            return None;
+        }
+        self.advance();
+
+        Some(Value::Map(map))
+    }
+
     pub fn parse_value(&mut self) -> Option<Value> {
         match self.lookahead.clone()? {
             Token::Null => {
@@ -115,6 +174,7 @@ impl<'a> Parser<'a> {
             }
 
             Token::LBracket => self.parse_list(),
+            Token::LBrace => self.parse_map(),
 
             _ => None,
         }
