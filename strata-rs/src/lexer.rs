@@ -37,11 +37,11 @@ impl<'a> Lexer<'a> {
         self.input.get(self.pos).copied()
     }
 
-    fn hex_digit(b: u8) -> Option<u8> {
-        match b {
-            b'0'..=b'9' => Some(b - b'0'),
-            b'a'..=b'f' => Some(b - b'a' + 10),
-            b'A'..=b'F' => Some(b - b'A' + 10),
+    fn hex_digit(byte: u8) -> Option<u8> {
+        match byte {
+            b'0'..=b'9' => Some(byte - b'0'),
+            b'a'..=b'f' => Some(byte - b'a' + 10),
+            b'A'..=b'F' => Some(byte - b'A' + 10),
             _ => None,
         }
     }
@@ -56,9 +56,9 @@ impl<'a> Lexer<'a> {
             // line comment with //
             if self.peek() == Some(b'/') && self.input.get(self.pos + 1) == Some(&b'/') {
                 self.pos += 2;
-                while let Some(b) = self.peek() {
+                while let Some(current_byte) = self.peek() {
                     self.pos += 1;
-                    if b == b'\n' {
+                    if current_byte == b'\n' {
                         break;
                     }
                 }
@@ -68,9 +68,9 @@ impl<'a> Lexer<'a> {
             // line comment with #
             if self.peek() == Some(b'#') {
                 self.pos += 1;
-                while let Some(b) = self.peek() {
+                while let Some(current_byte) = self.peek() {
                     self.pos += 1;
-                    if b == b'\n' {
+                    if current_byte == b'\n' {
                         break;
                     }
                 }
@@ -87,8 +87,8 @@ impl<'a> Lexer<'a> {
         // first char is guaranteed to be [A-Za-z_]
         self.pos += 1;
 
-        while let Some(b) = self.peek() {
-            if matches!(b, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'_') {
+        while let Some(current_byte) = self.peek() {
+            if matches!(current_byte, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'_') {
                 self.pos += 1;
             } else {
                 break;
@@ -117,8 +117,8 @@ impl<'a> Lexer<'a> {
 
         let mut saw_digit = false;
 
-        while let Some(b) = self.peek() {
-            if matches!(b, b'0'..=b'9') {
+        while let Some(current_byte) = self.peek() {
+            if matches!(current_byte, b'0'..=b'9') {
                 saw_digit = true;
                 self.pos += 1;
             } else {
@@ -135,9 +135,9 @@ impl<'a> Lexer<'a> {
         let slice = &self.input[start..self.pos];
         let text = std::str::from_utf8(slice).ok()?;
 
-        let val = text.parse::<i64>().ok()?;
+        let parsed_value = text.parse::<i64>().ok()?;
 
-        Some(Token::Int(val))
+        Some(Token::Int(parsed_value))
     }
 
     fn lex_bytes(&mut self) -> Option<Token> {
@@ -153,8 +153,8 @@ impl<'a> Lexer<'a> {
 
         let hex_start = self.pos;
 
-        while let Some(b) = self.peek() {
-            if matches!(b, b'0'..=b'9' | b'a'..=b'f' | b'A'..=b'F') {
+        while let Some(current_byte) = self.peek() {
+            if matches!(current_byte, b'0'..=b'9' | b'a'..=b'f' | b'A'..=b'F') {
                 self.pos += 1;
             } else {
                 break;
@@ -173,9 +173,9 @@ impl<'a> Lexer<'a> {
         let mut bytes = Vec::with_capacity(hex_len / 2);
 
         for i in (0..hex_len).step_by(2) {
-            let hi = Self::hex_digit(hex[i])?;
-            let lo = Self::hex_digit(hex[i + 1])?;
-            bytes.push((hi << 4) | lo);
+            let high_nibble = Self::hex_digit(hex[i])?;
+            let low_nibble = Self::hex_digit(hex[i + 1])?;
+            bytes.push((high_nibble << 4) | low_nibble);
         }
 
         Some(Token::Bytes(bytes))
@@ -192,8 +192,8 @@ impl<'a> Lexer<'a> {
 
         let mut out = String::new();
 
-        while let Some(b) = self.peek() {
-            match b {
+        while let Some(current_byte) = self.peek() {
+            match current_byte {
                 b'"' => {
                     // closing quote
                     self.pos += 1;
@@ -203,10 +203,10 @@ impl<'a> Lexer<'a> {
                 b'\\' => {
                     //escape seq
                     self.pos += 1;
-                    let esc = self.peek()?;
+                    let escape_char = self.peek()?;
                     self.pos += 1;
 
-                    match esc {
+                    match escape_char {
                         b'"' => out.push('"'),
                         b'\\' => out.push('\\'),
                         b'n' => out.push('\n'),
@@ -218,14 +218,14 @@ impl<'a> Lexer<'a> {
                             let mut codepoint: u32 = 0;
 
                             for _ in 0..4 {
-                                let h = self.peek()?;
+                                let hex_char = self.peek()?;
                                 self.pos += 1;
-                                let v = Self::hex_digit(h)? as u32;
-                                codepoint = (codepoint << 4) | v;
+                                let digit_value = Self::hex_digit(hex_char)? as u32;
+                                codepoint = (codepoint << 4) | digit_value;
                             }
 
-                            let ch = char::from_u32(codepoint)?;
-                            out.push(ch);
+                            let unicode_char = char::from_u32(codepoint)?;
+                            out.push(unicode_char);
                         }
 
                         _ => return None, // invalid escape
@@ -239,11 +239,11 @@ impl<'a> Lexer<'a> {
 
                 _ => {
                     // regular UTF-8 byte
-                    if b >= 0x80 {
+                    if current_byte >= 0x80 {
                         return None; // non-ASCII not allowed in v1 str
                     }
 
-                    out.push(b as char);
+                    out.push(current_byte as char);
                     self.pos += 1;
                 }
             }
@@ -255,9 +255,9 @@ impl<'a> Lexer<'a> {
     pub fn next_token(&mut self) -> Option<Token> {
         self.skip_ignored();
 
-        let b = self.peek()?;
+        let current_byte = self.peek()?;
 
-        match b {
+        match current_byte {
             b'{' => { self.pos += 1; Some(Token::LBrace) }
             b'}' => { self.pos += 1; Some(Token::RBrace) }
             b'[' => { self.pos += 1; Some(Token::LBracket) }

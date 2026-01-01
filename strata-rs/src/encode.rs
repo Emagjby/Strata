@@ -1,25 +1,25 @@
-pub fn encode_uleb128(mut n: u64, out: &mut Vec<u8>) {
+pub fn encode_uleb128(mut value: u64, out: &mut Vec<u8>) {
     loop {
-        let mut byte = (n & 0x7F) as u8;
-        n >>= 7;
-        if n != 0 {
+        let mut byte = (value & 0x7F) as u8;
+        value >>= 7;
+        if value != 0 {
             byte |= 0x80;
         }
         out.push(byte);
-        if n == 0 {
+        if value == 0 {
             break;
         }
     }
 }
 
-pub fn encode_sleb128(mut n: i64, out: &mut Vec<u8>) {
+pub fn encode_sleb128(mut value: i64, out: &mut Vec<u8>) {
     loop {
-        let byte = (n & 0x7F) as u8;
+        let byte = (value & 0x7F) as u8;
         let sign_bit = byte & 0x40;
-        n >>= 7;
+        value >>= 7;
 
-        let done = (n == 0 && sign_bit == 0)
-            || (n == -1 && sign_bit != 0);
+        let done = (value == 0 && sign_bit == 0)
+            || (value == -1 && sign_bit != 0);
 
         out.push(if done { byte } else { byte | 0x80 });
 
@@ -51,22 +51,22 @@ fn encode_into(value: &Value, out: &mut Vec<u8>) {
             out.push(0x02);
         }
 
-        Value::Int(n) => {
+        Value::Int(number) => {
             out.push(0x10);
-            encode_sleb128(*n, out);
+            encode_sleb128(*number, out);
         }
 
-        Value::String(s) => {
+        Value::String(string) => {
             out.push(0x20);
-            let bytes = s.as_bytes();
+            let bytes = string.as_bytes();
             encode_uleb128(bytes.len() as u64, out);
             out.extend_from_slice(bytes);
         }
 
-        Value::Bytes(b) => {
+        Value::Bytes(bytes) => {
             out.push(0x21);
-            encode_uleb128(b.len() as u64, out);
-            out.extend_from_slice(b);
+            encode_uleb128(bytes.len() as u64, out);
+            out.extend_from_slice(bytes);
         }
 
         Value::List(items) => {

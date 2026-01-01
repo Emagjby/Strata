@@ -6,12 +6,12 @@ mod tests {
         use crate::value::Value;
         use crate::hash::hash_value;
 
-        let v = Value::Int(42);
+        let value = Value::Int(42);
 
-        let h1 = hash_value(&v);
-        let h2 = hash_value(&v);
+        let hash1 = hash_value(&value);
+        let hash2 = hash_value(&value);
 
-        assert_eq!(h1, h2);
+        assert_eq!(hash1, hash2);
     }
 
     #[test]
@@ -19,13 +19,13 @@ mod tests {
         use crate::value::Value;
         use crate::hash::hash_value;
 
-        let v1 = Value::Int(42);
-        let v2 = Value::Int(43);
+        let value1 = Value::Int(42);
+        let value2 = Value::Int(43);
 
-        let h1 = hash_value(&v1);
-        let h2 = hash_value(&v2);
+        let hash1 = hash_value(&value1);
+        let hash2 = hash_value(&value2);
 
-        assert_ne!(h1, h2);
+        assert_ne!(hash1, hash2);
     }
 
     #[test]
@@ -33,9 +33,9 @@ mod tests {
         use crate::value::Value;
         use crate::hash::hash_value;
 
-        let a = Value::List(vec![Value::Int(1), Value::Int(2)]);
-        let b = Value::List(vec![Value::Int(2), Value::Int(1)]);
+        let list_a = Value::List(vec![Value::Int(1), Value::Int(2)]);
+        let list_b = Value::List(vec![Value::Int(2), Value::Int(1)]);
 
-        assert_ne!(hash_value(&a), hash_value(&b));
+        assert_ne!(hash_value(&list_a), hash_value(&list_b));
     }
 }
