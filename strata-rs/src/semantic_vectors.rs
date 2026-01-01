@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::parser::{Parser, Value};
+    use crate::parser::Parser;
+    use crate::value::Value;
 
     #[test]
     fn semantic_vector_config() {

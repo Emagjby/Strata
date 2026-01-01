@@ -28,3 +28,69 @@ pub fn encode_sleb128(mut n: i64, out: &mut Vec<u8>) {
         }
     }
 }
+
+use crate::value::Value;
+
+pub fn encode_value(value: &Value) -> Vec<u8> {
+    let mut out = Vec::new();
+    encode_into(value, &mut out);
+    out
+}
+
+fn encode_into(value: &Value, out: &mut Vec<u8>) {
+    match value {
+        Value::Null => {
+            out.push(0x00);
+        }
+
+        Value::Bool(false) => {
+            out.push(0x01);
+        }
+
+        Value::Bool(true) => {
+            out.push(0x02);
+        }
+
+        Value::Int(n) => {
+            out.push(0x10);
+            encode_sleb128(*n, out);
+        }
+
+        Value::String(s) => {
+            out.push(0x20);
+            let bytes = s.as_bytes();
+            encode_uleb128(bytes.len() as u64, out);
+            out.extend_from_slice(bytes);
+        }
+
+        Value::Bytes(b) => {
+            out.push(0x21);
+            encode_uleb128(b.len() as u64, out);
+            out.extend_from_slice(b);
+        }
+
+        Value::List(items) => {
+            out.push(0x30);
+            encode_uleb128(items.len() as u64, out);
+            for item in items {
+                encode_into(item, out);
+            }
+        }
+
+        Value::Map(map) => {
+            out.push(0x40);
+            encode_uleb128(map.len() as u64, out);
+
+            // BTreeMap guarantees canonical order
+            for (key, value) in map {
+                // key encoded exactly like a String
+                out.push(0x20);
+                let key_bytes = key.as_bytes();
+                encode_uleb128(key_bytes.len() as u64, out);
+                out.extend_from_slice(key_bytes);
+
+                encode_into(value, out);
+            }
+        }
+    }
+}

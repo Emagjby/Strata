@@ -1,16 +1,6 @@
 use crate::lexer::{Lexer, Token};
 use std::collections::BTreeMap;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Value {
-    Null,
-    Bool(bool),
-    Int(i64),
-    String(String),
-    Bytes(Vec<u8>),
-    List(Vec<Value>),
-    Map(BTreeMap<String, Value>),
-}
+use crate::value::Value;
 
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
@@ -26,15 +16,6 @@ impl<'a> Parser<'a> {
 
     fn advance(&mut self) {
         self.lookahead = self.lexer.next_token();
-    }
-
-    fn expect(&mut self, expected: Token) -> Option<()> {
-        if self.lookahead == Some(expected) {
-            self.advance();
-            Some(())
-        } else {
-            None
-        }
     }
 
     fn parse_list(&mut self) -> Option<Value> {

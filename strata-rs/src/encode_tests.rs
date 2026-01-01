@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::encode::{encode_uleb128, encode_sleb128};
+    use crate::encode::{encode_uleb128, encode_sleb128, encode_value};
+    use crate::value::Value;
 
     #[test]
     fn uleb128_basic() {
@@ -42,5 +43,88 @@ mod tests {
         out.clear();
         encode_sleb128(-128, &mut out);
         assert_eq!(out, vec![0x80, 0x7F]);
+    }
+
+    // primitives
+    #[test]
+    fn encode_null() {
+        assert_eq!(encode_value(&Value::Null), vec![0x00]);
+    }
+
+    #[test]
+    fn encode_bool() {
+        assert_eq!(encode_value(&Value::Bool(false)), vec![0x01]);
+        assert_eq!(encode_value(&Value::Bool(true)), vec![0x02]);
+    }
+
+    #[test]
+    fn encode_int() {
+        assert_eq!(encode_value(&Value::Int(1)), vec![0x10, 0x01]);
+    }
+
+    // string & bytes
+    #[test]
+    fn encode_string() {
+        let v = Value::String("hi".into());
+        assert_eq!(encode_value(&v), vec![0x20, 0x02, b'h', b'i']);
+    }
+
+    #[test]
+    fn encode_bytes() {
+        let v = Value::Bytes(vec![0xDE, 0xAD]);
+        assert_eq!(encode_value(&v), vec![0x21, 0x02, 0xDE, 0xAD]);
+    }
+
+    // lists
+    #[test]
+    fn encode_list() {
+        let v = Value::List(vec![Value::Int(1), Value::Int(2)]);
+        assert_eq!(
+            encode_value(&v),
+            vec![0x30, 0x02, 0x10, 0x01, 0x10, 0x02]
+        );
+    }
+
+    // maps
+    #[test]
+    fn encode_map_sorted() {
+        use std::collections::BTreeMap;
+
+        let mut map = BTreeMap::new();
+        map.insert("b".into(), Value::Int(2));
+        map.insert("a".into(), Value::Int(1));
+
+        let v = Value::Map(map);
+
+        assert_eq!(
+            encode_value(&v),
+            vec![
+                0x40, 0x02,
+                0x20, 0x01, b'a', 0x10, 0x01,
+                0x20, 0x01, b'b', 0x10, 0x02,
+            ]
+        );
+    }
+
+    // nested structures
+    #[test]
+    fn encode_nested() {
+        let v = Value::List(vec![
+            Value::Map({
+                let mut m = std::collections::BTreeMap::new();
+                m.insert("x".into(), Value::Int(1));
+                m
+            })
+        ]);
+
+        assert_eq!(
+            encode_value(&v),
+            vec![
+                0x30, 0x01,
+                0x40, 0x01,
+                0x20, 0x01, b'x',
+                0x10, 0x01
+            ]
+        );
     }
 }
