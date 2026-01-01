@@ -35,15 +35,15 @@ pub fn run_vector(name: &str) {
         .join("vectors")
         .join(name);
 
-    let st_path = base.with_extension("st");
+    let strata_source_path = base.with_extension("st");
     let scb_path = base.with_extension("scb.hex");
     let hash_path = base.with_extension("hash.hex");
 
-    let st = fs::read_to_string(&st_path)
-        .unwrap_or_else(|_| panic!("failed to read {}", st_path.display()));
+    let source_text = fs::read_to_string(&strata_source_path)
+        .unwrap_or_else(|_| panic!("failed to read {}", strata_source_path.display()));
 
-    let value = parse(&st)
-        .unwrap_or_else(|| panic!("parse failed for {}", st_path.display()));
+    let value = parse(&source_text)
+        .unwrap_or_else(|| panic!("parse failed for {}", strata_source_path.display()));
 
     let encoded = encode_value(&value);
 

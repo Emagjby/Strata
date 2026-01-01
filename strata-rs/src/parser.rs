@@ -35,8 +35,8 @@ impl<'a> Parser<'a> {
 
         loop {
             // parse value
-            let val = self.parse_value()?;
-            items.push(val);
+            let element = self.parse_value()?;
+            items.push(element);
 
             match self.lookahead {
                 Some(Token::Comma) => {
@@ -148,20 +148,20 @@ impl<'a> Parser<'a> {
                 Some(Value::Bool(false))
             }
 
-            Token::Int(n) => {
+            Token::Int(number) => {
                 self.advance();
-                Some(Value::Int(n))
+                Some(Value::Int(number))
             }
 
-            Token::String(s) => {
+            Token::String(string) => {
                 self.advance();
-                Some(Value::String(s))
+                Some(Value::String(string))
             }
 
 
-            Token::Bytes(b) => {
+            Token::Bytes(bytes) => {
                 self.advance();
-                Some(Value::Bytes(b))
+                Some(Value::Bytes(bytes))
             }
 
             Token::Ident(name) => {
@@ -191,11 +191,11 @@ impl<'a> Parser<'a> {
 pub fn parse(input: &str) -> Option<Value> {
     let mut parser = Parser::new(input);
 
-    let val = parser.parse_value()?;
+    let parsed_value = parser.parse_value()?;
 
     if parser.lookahead.is_some() {
         return None;
     }
 
-    Some(val)
+    Some(parsed_value)
 }

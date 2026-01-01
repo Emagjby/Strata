@@ -33,13 +33,13 @@ fn main() {
 
     match cli.command {
         Commands::Compile { input, output } => {
-            let st = fs::read_to_string(&input)
+            let source_text = fs::read_to_string(&input)
                 .expect("failed to read input");
 
-            let val = parse(&st)
+            let parsed_value = parse(&source_text)
                 .expect("parse failed");
 
-            let bytes = encode_value(&val);
+            let bytes = encode_value(&parsed_value);
 
             fs::write(&output, bytes)
                 .expect("failed to write output");
@@ -47,8 +47,8 @@ fn main() {
 
         Commands::Hash { input } => {
             let bytes = if input.ends_with(".st") {
-                let st = fs::read_to_string(&input).expect("failed to read input");
-                let value = parse(&st).expect("parse failed");
+                let source_text = fs::read_to_string(&input).expect("failed to read input");
+                let value = parse(&source_text).expect("parse failed");
                 encode_value(&value)
             } else {
                 fs::read(&input).expect("failed to read input")
@@ -60,8 +60,8 @@ fn main() {
         }
 
         Commands::Fmt { input } => {
-            let st = fs::read_to_string(&input).expect("failed to read input");
-            let value = parse(&st).expect("parse failed");
+            let source_text = fs::read_to_string(&input).expect("failed to read input");
+            let value = parse(&source_text).expect("parse failed");
             println!("{:#?}", value);
         }
     }

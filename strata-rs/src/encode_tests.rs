@@ -66,22 +66,22 @@ mod tests {
     // string & bytes
     #[test]
     fn encode_string() {
-        let v = Value::String("hi".into());
-        assert_eq!(encode_value(&v), vec![0x20, 0x02, b'h', b'i']);
+        let value = Value::String("hi".into());
+        assert_eq!(encode_value(&value), vec![0x20, 0x02, b'h', b'i']);
     }
 
     #[test]
     fn encode_bytes() {
-        let v = Value::Bytes(vec![0xDE, 0xAD]);
-        assert_eq!(encode_value(&v), vec![0x21, 0x02, 0xDE, 0xAD]);
+        let value = Value::Bytes(vec![0xDE, 0xAD]);
+        assert_eq!(encode_value(&value), vec![0x21, 0x02, 0xDE, 0xAD]);
     }
 
     // lists
     #[test]
     fn encode_list() {
-        let v = Value::List(vec![Value::Int(1), Value::Int(2)]);
+        let value = Value::List(vec![Value::Int(1), Value::Int(2)]);
         assert_eq!(
-            encode_value(&v),
+            encode_value(&value),
             vec![0x30, 0x02, 0x10, 0x01, 0x10, 0x02]
         );
     }
@@ -95,10 +95,10 @@ mod tests {
         map.insert("b".into(), Value::Int(2));
         map.insert("a".into(), Value::Int(1));
 
-        let v = Value::Map(map);
+        let value = Value::Map(map);
 
         assert_eq!(
-            encode_value(&v),
+            encode_value(&value),
             vec![
                 0x40, 0x02,
                 0x20, 0x01, b'a', 0x10, 0x01,
@@ -110,7 +110,7 @@ mod tests {
     // nested structures
     #[test]
     fn encode_nested() {
-        let v = Value::List(vec![
+        let value = Value::List(vec![
             Value::Map({
                 let mut m = std::collections::BTreeMap::new();
                 m.insert("x".into(), Value::Int(1));
@@ -119,7 +119,7 @@ mod tests {
         ]);
 
         assert_eq!(
-            encode_value(&v),
+            encode_value(&value),
             vec![
                 0x30, 0x01,
                 0x40, 0x01,
@@ -132,10 +132,10 @@ mod tests {
     // framing
     #[test]
     fn framed_vs_unframed() {
-        let v = Value::Int(1);
+        let value = Value::Int(1);
 
-        let unframed = encode_value(&v);
-        let framed = encode_framed(&v);
+        let unframed = encode_value(&value);
+        let framed = encode_framed(&value);
 
         assert_eq!(unframed, vec![0x10, 0x01]);
 
