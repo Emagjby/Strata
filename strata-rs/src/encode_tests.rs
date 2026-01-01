@@ -2,6 +2,7 @@
 mod tests {
     use crate::encode::{encode_uleb128, encode_sleb128, encode_value};
     use crate::value::Value;
+    use crate::framing::encode_framed;
 
     #[test]
     fn uleb128_basic() {
@@ -123,6 +124,26 @@ mod tests {
                 0x30, 0x01,
                 0x40, 0x01,
                 0x20, 0x01, b'x',
+                0x10, 0x01
+            ]
+        );
+    }
+
+    // framing
+    #[test]
+    fn framed_vs_unframed() {
+        let v = Value::Int(1);
+
+        let unframed = encode_value(&v);
+        let framed = encode_framed(&v);
+
+        assert_eq!(unframed, vec![0x10, 0x01]);
+
+        assert_eq!(
+            framed,
+            vec![
+                b'S', b'T', b'R', b'A', b'T', b'A', b'1',
+                0x01,
                 0x10, 0x01
             ]
         );

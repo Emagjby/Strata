@@ -4,6 +4,7 @@ pub mod decode;
 pub mod hash;
 pub mod lexer;
 pub mod parser;
+pub mod framing;
 
 mod lexer_tests;
 mod parser_tests;
