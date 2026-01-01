@@ -10,3 +10,4 @@ mod lexer_tests;
 mod parser_tests;
 mod semantic_vectors;
 mod encode_tests;
+mod hash_tests;
