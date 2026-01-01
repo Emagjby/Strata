@@ -19,4 +19,50 @@ mod tests {
         let mut p = Parser::new(r#""hello""#);
         assert_eq!(p.parse_value(), Some(Value::String("hello".into())));
     }
+
+    #[test]
+    fn parse_empty_list() {
+        let mut p = Parser::new("[]");
+        assert_eq!(p.parse_value(), Some(Value::List(vec![])));
+    }
+
+    #[test]
+    fn parse_list_of_ints() {
+        let mut p = Parser::new("[1, 2, 3]");
+        assert_eq!(
+            p.parse_value(),
+            Some(Value::List(vec![
+                Value::Int(1),
+                Value::Int(2),
+                Value::Int(3),
+            ]))
+        );
+    }
+
+    #[test]
+    fn parse_list_with_trailing_comma() {
+        let mut p = Parser::new("[1, 2,]");
+        assert_eq!(
+            p.parse_value(),
+            Some(Value::List(vec![
+                Value::Int(1),
+                Value::Int(2),
+            ]))
+        );
+    }
+
+    #[test]
+    fn parse_nested_list() {
+        let mut p = Parser::new("[1, [2, 3]]");
+        assert_eq!(
+            p.parse_value(),
+            Some(Value::List(vec![
+                Value::Int(1),
+                Value::List(vec![
+                    Value::Int(2),
+                    Value::Int(3),
+                ])
+            ]))
+        );
+    }
 }

@@ -37,6 +37,50 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn parse_list(&mut self) -> Option<Value> {
+        // expect '['
+        if self.lookahead != Some(Token::LBracket) {
+            return None;
+        }
+        self.advance(); // consume '['
+
+        let mut items = Vec::new();
+
+        // empty list
+        if self.lookahead == Some(Token::RBracket) {
+            self.advance(); // consume ']'
+            return Some(Value::List(items));
+        }
+
+        loop {
+            // parse value
+            let val = self.parse_value()?;
+            items.push(val);
+
+            match self.lookahead {
+                Some(Token::Comma) => {
+                    self.advance(); // consume ','
+
+                    // allow trailing comma
+                    if self.lookahead == Some(Token::RBracket) {
+                        break;
+                    }
+                }
+                
+                Some(Token::RBracket) => break,
+                _ => return None,
+            }
+        }
+
+        // consume closing ']'
+        if self.lookahead != Some(Token::RBracket) {
+            return None;
+        }
+        self.advance();
+
+        Some(Value::List(items))
+    }
+
     pub fn parse_value(&mut self) -> Option<Value> {
         match self.lookahead.clone()? {
             Token::Null => {
@@ -69,6 +113,8 @@ impl<'a> Parser<'a> {
                 self.advance();
                 Some(Value::Bytes(b))
             }
+
+            Token::LBracket => self.parse_list(),
 
             _ => None,
         }
