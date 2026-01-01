@@ -188,4 +188,32 @@ mod tests {
 
         assert_eq!(p.parse_value(), Some(Value::Map(root)));
     }
+
+    #[test]
+    fn int_out_of_range_rejected() {
+        let input = "9223372036854775808";
+        assert!(crate::parser::parse(input).is_none());
+    }
+
+    #[test]
+    fn duplicate_keys_last_write_wins() {
+        let input = r#"
+            a {
+                x: 1
+                x: 2
+            }
+        "#;
+
+        let v = crate::parser::parse(input).unwrap();
+
+        use std::collections::BTreeMap;
+
+        let mut inner = BTreeMap::new();
+        inner.insert("x".into(), Value::Int(2));
+
+        let mut root = BTreeMap::new();
+        root.insert("a".into(), Value::Map(inner));
+
+        assert_eq!(v, Value::Map(root));
+    }
 }
