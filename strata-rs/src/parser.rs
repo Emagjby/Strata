@@ -107,14 +107,18 @@ impl<'a> Parser<'a> {
                 _ => return None,
             };
 
-            // expect ':'
-            if self.lookahead != Some(Token::Colon) {
-                return None;
-            }
-            self.advance();
+            let value = if self.lookahead == Some(Token::LBrace) {
+                // shorthand entry: key { ... }
+                self.parse_map()?
+            } else {
+                // normal entry: key : value
+                if self.lookahead != Some(Token::Colon) {
+                    return None;
+                }
+                self.advance(); // consume ':'
+                self.parse_value()?
+            };
 
-            // parse value
-            let value = self.parse_value()?;
             map.insert(key, value);
 
             match self.lookahead {
@@ -171,6 +175,22 @@ impl<'a> Parser<'a> {
             Token::Bytes(b) => {
                 self.advance();
                 Some(Value::Bytes(b))
+            }
+
+            Token::Ident(name) => {
+                self.advance();
+
+                // identifier followed by '{' -> shorthand
+                if self.lookahead == Some(Token::LBrace) {
+                    let inner = self.parse_map()?;
+
+                    let mut map = BTreeMap::new();
+                    map.insert(name, inner);
+
+                    Some(Value::Map(map))
+                } else {
+                    None
+                }
             }
 
             Token::LBracket => self.parse_list(),

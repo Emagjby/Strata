@@ -112,4 +112,37 @@ mod tests {
 
         assert_eq!(p.parse_value(), Some(Value::Map(outer)));
     }
+
+    #[test]
+    fn parse_map_shorthand() {
+        let mut p = Parser::new("user { id: 42 }");
+
+        use std::collections::BTreeMap;
+
+        let mut inner = BTreeMap::new();
+        inner.insert("id".into(), Value::Int(42));
+
+        let mut outer = BTreeMap::new();
+        outer.insert("user".into(), Value::Map(inner));
+
+        assert_eq!(p.parse_value(), Some(Value::Map(outer)));
+    }
+
+    #[test]
+    fn parse_nested_shorthand() {
+        let mut p = Parser::new("a { b { c: 1 } }");
+
+        use std::collections::BTreeMap;
+
+        let mut c = BTreeMap::new();
+        c.insert("c".into(), Value::Int(1));
+
+        let mut b = BTreeMap::new();
+        b.insert("b".into(), Value::Map(c));
+
+        let mut a = BTreeMap::new();
+        a.insert("a".into(), Value::Map(b));
+
+        assert_eq!(p.parse_value(), Some(Value::Map(a)));
+    }
 }
