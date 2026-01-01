@@ -145,4 +145,46 @@ mod tests {
 
         assert_eq!(p.parse_value(), Some(Value::Map(a)));
     }
+
+    #[test]
+    fn parse_full_example_2_4() {
+        let input = r#"
+            user {
+              id: 42
+              name: "Gencho"
+              active: true
+              skills: ["rust", "svelte", "systems"]
+              avatar_hash: 0x9f86d081884c7d659a2feaa0c55ad015
+            }
+        "#;
+
+        let mut p = Parser::new(input);
+
+        use std::collections::BTreeMap;
+
+        let mut user = BTreeMap::new();
+        user.insert("id".into(), Value::Int(42));
+        user.insert("name".into(), Value::String("Gencho".into()));
+        user.insert("active".into(), Value::Bool(true));
+        user.insert(
+            "skills".into(),
+            Value::List(vec![
+                Value::String("rust".into()),
+                Value::String("svelte".into()),
+                Value::String("systems".into()),
+            ]),
+        );
+        user.insert(
+            "avatar_hash".into(),
+            Value::Bytes(vec![
+                0x9f, 0x86, 0xd0, 0x81, 0x88, 0x4c, 0x7d, 0x65,
+                0x9a, 0x2f, 0xea, 0xa0, 0xc5, 0x5a, 0xd0, 0x15,
+            ]),
+        );
+
+        let mut root = BTreeMap::new();
+        root.insert("user".into(), Value::Map(user));
+
+        assert_eq!(p.parse_value(), Some(Value::Map(root)));
+    }
 }

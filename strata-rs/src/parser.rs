@@ -130,7 +130,13 @@ impl<'a> Parser<'a> {
                         break;
                     }
                 }
+
                 Some(Token::RBrace) => break,
+
+                Some(Token::Ident(_)) => {
+                    // continue parsing
+                }
+
                 _ => return None,
             }
         }
