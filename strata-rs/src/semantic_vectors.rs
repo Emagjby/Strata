@@ -1,6 +1,91 @@
+use std::fs;
+use std::path::Path;
+
+use crate::parser::parse;
+use crate::encode::encode_value;
+use crate::hash::hash_value;
+
+#[allow(dead_code)]
+fn read_hex_file(path: &Path) -> Vec<u8> {
+    let text = fs::read_to_string(path)
+        .unwrap_or_else(|_| panic!("failed to read {}", path.display()));
+
+    let text = text.trim();
+
+    assert!(
+        text.len() % 2 == 0,
+        "hex file has odd length: {}",
+        path.display()
+    );
+
+    let mut out = Vec::with_capacity(text.len() / 2);
+    for i in (0..text.len()).step_by(2) {
+        let byte = u8::from_str_radix(&text[i..i + 2], 16)
+            .unwrap_or_else(|_| panic!("invalid hex in {}", path.display()));
+        out.push(byte);
+    }
+
+    out
+}
+
+#[allow(dead_code)]
+pub fn run_vector(name: &str) {
+    let base = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("vectors")
+        .join(name);
+
+    let st_path = base.with_extension("st");
+    let scb_path = base.with_extension("scb.hex");
+    let hash_path = base.with_extension("hash.hex");
+
+    let st = fs::read_to_string(&st_path)
+        .unwrap_or_else(|_| panic!("failed to read {}", st_path.display()));
+
+    let value = parse(&st)
+        .unwrap_or_else(|| panic!("parse failed for {}", st_path.display()));
+
+    let encoded = encode_value(&value);
+
+    let hash = hash_value(&value);
+
+    let exp_scb = read_hex_file(&scb_path);
+    let exp_hash = read_hex_file(&hash_path);
+
+    assert_eq!(
+        encoded, exp_scb,
+        "SCB mismatch for vector {}",
+        name
+    );
+
+    assert_eq!(
+        hash.to_vec(), exp_hash,
+        "hash mismatch for vector {}",
+        name
+    );
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::parser::Parser;
+    use crate::semantic_vectors::run_vector;
+
+    #[test]
+    fn vector_v1_01_basic() {
+        run_vector("v1/01-basic");
+    }
+
+    #[test]
+    fn vector_v1_02_map_order() {
+        run_vector("v1/02-map-order");
+    }
+
+    #[test]
+    fn vector_v1_03_bigint_bytes() {
+        run_vector("v1/03-bigint-bytes");
+    }
+
+    // other tests - to move later
+    use crate::parser::{Parser};
     use crate::value::Value;
 
     #[test]

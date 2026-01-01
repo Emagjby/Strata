@@ -187,3 +187,15 @@ impl<'a> Parser<'a> {
         }
     }
 }
+
+pub fn parse(input: &str) -> Option<Value> {
+    let mut parser = Parser::new(input);
+
+    let val = parser.parse_value()?;
+
+    if parser.lookahead.is_some() {
+        return None;
+    }
+
+    Some(val)
+}
