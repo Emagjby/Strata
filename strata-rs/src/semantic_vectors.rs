@@ -1,19 +1,19 @@
 use std::fs;
 use std::path::Path;
 
-use crate::parser::parse;
 use crate::encode::encode_value;
 use crate::hash::hash_value;
+use crate::parser::parse;
 
 #[allow(dead_code)]
 fn read_hex_file(path: &Path) -> Vec<u8> {
-    let text = fs::read_to_string(path)
-        .unwrap_or_else(|_| panic!("failed to read {}", path.display()));
+    let text =
+        fs::read_to_string(path).unwrap_or_else(|_| panic!("failed to read {}", path.display()));
 
     let text = text.trim();
 
     assert!(
-        text.len() % 2 == 0,
+        text.len().is_multiple_of(2),
         "hex file has odd length: {}",
         path.display()
     );
@@ -52,17 +52,9 @@ pub fn run_vector(name: &str) {
     let exp_scb = read_hex_file(&scb_path);
     let exp_hash = read_hex_file(&hash_path);
 
-    assert_eq!(
-        encoded, exp_scb,
-        "SCB mismatch for vector {}",
-        name
-    );
+    assert_eq!(encoded, exp_scb, "SCB mismatch for vector {}", name);
 
-    assert_eq!(
-        hash.to_vec(), exp_hash,
-        "hash mismatch for vector {}",
-        name
-    );
+    assert_eq!(hash.to_vec(), exp_hash, "hash mismatch for vector {}", name);
 }
 
 #[cfg(test)]
@@ -84,8 +76,24 @@ mod tests {
         run_vector("v1/03-bigint-bytes");
     }
 
+    // northstar v2 (0.2)
+    #[test]
+    fn vector_v2_01_decode_roundtrip() {
+        run_vector("v2/01-decode-roundtrip");
+    }
+
+    #[test]
+    fn vector_v2_02_noncanonical_map_order() {
+        run_vector("v2/02-noncanonical-map-order");
+    }
+
+    #[test]
+    fn vector_v2_03_nested_structure() {
+        run_vector("v2/03-nested-structure");
+    }
+
     // other tests - to move later
-    use crate::parser::{Parser};
+    use crate::parser::Parser;
     use crate::value::Value;
 
     #[test]
@@ -159,8 +167,8 @@ mod tests {
         profile.insert(
             "avatar_hash".into(),
             Value::Bytes(vec![
-                0x9f, 0x86, 0xd0, 0x81, 0x88, 0x4c, 0x7d, 0x65,
-                0x9a, 0x2f, 0xea, 0xa0, 0xc5, 0x5a, 0xd0, 0x15,
+                0x9f, 0x86, 0xd0, 0x81, 0x88, 0x4c, 0x7d, 0x65, 0x9a, 0x2f, 0xea, 0xa0, 0xc5, 0x5a,
+                0xd0, 0x15,
             ]),
         );
         profile.insert(
