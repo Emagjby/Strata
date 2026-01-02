@@ -11,4 +11,5 @@ mod encode_tests;
 mod hash_tests;
 mod lexer_tests;
 mod parser_tests;
+mod roundtrip_tests;
 mod semantic_vectors;
