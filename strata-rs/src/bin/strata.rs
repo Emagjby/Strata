@@ -1,8 +1,9 @@
 use clap::{Parser, Subcommand};
 use std::fs;
 
-use strata::parser::parse;
+use strata::decode::decode;
 use strata::encode::encode_value;
+use strata::parser::parse;
 
 #[derive(Parser)]
 #[command(name = "strata")]
@@ -14,18 +15,13 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    Compile {
-        input: String,
-        output: String,
-    },
+    Compile { input: String, output: String },
 
-    Hash {
-        input: String,
-    },
+    Hash { input: String },
 
-    Fmt {
-        input: String,
-    },
+    Decode { input: String },
+
+    Fmt { input: String },
 }
 
 fn main() {
@@ -33,16 +29,22 @@ fn main() {
 
     match cli.command {
         Commands::Compile { input, output } => {
-            let source_text = fs::read_to_string(&input)
-                .expect("failed to read input");
+            let source_text = fs::read_to_string(&input).expect("failed to read input");
 
-            let parsed_value = parse(&source_text)
-                .expect("parse failed");
+            let parsed_value = parse(&source_text).expect("parse failed");
 
             let bytes = encode_value(&parsed_value);
 
-            fs::write(&output, bytes)
-                .expect("failed to write output");
+            fs::write(&output, bytes).expect("failed to write output");
+        }
+
+        Commands::Decode { input } => {
+            let bytes = fs::read(&input).expect("failed to read input");
+
+            let value = decode(&bytes).expect("decode failed");
+
+            // Debug-only, human readable
+            println!("{:#?}", value);
         }
 
         Commands::Hash { input } => {

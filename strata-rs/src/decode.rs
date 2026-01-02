@@ -144,15 +144,15 @@ impl<'a> Decoder<'a> {
             other => Err(DecodeError::InvalidTag(other)),
         }
     }
+}
 
-    pub fn decode(input: &[u8]) -> Result<Value, DecodeError> {
-        let mut decoder = Decoder::new(input);
-        let value = decoder.decode_value()?;
+pub fn decode(input: &[u8]) -> Result<Value, DecodeError> {
+    let mut decoder = Decoder::new(input);
+    let value = decoder.decode_value()?;
 
-        if decoder.remaining() != 0 {
-            return Err(DecodeError::InvalidTag(0)); // Extra data after valid value
-        }
-
-        Ok(value)
+    if decoder.remaining() != 0 {
+        return Err(DecodeError::InvalidTag(0)); // Extra data after valid value
     }
+
+    Ok(value)
 }

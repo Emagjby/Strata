@@ -1,25 +1,25 @@
 #[cfg(test)]
 mod tests {
-    use crate::decode::{DecodeError, Decoder};
+    use crate::decode::{DecodeError, decode};
     use crate::value::Value;
 
     // null/bool/int
     #[test]
     fn decode_null() {
         let bytes = vec![0x00];
-        assert_eq!(Decoder::decode(&bytes).unwrap(), Value::Null);
+        assert_eq!(decode(&bytes).unwrap(), Value::Null);
     }
 
     #[test]
     fn decode_bool() {
-        assert_eq!(Decoder::decode(&[0x01]).unwrap(), Value::Bool(false));
-        assert_eq!(Decoder::decode(&[0x02]).unwrap(), Value::Bool(true));
+        assert_eq!(decode(&[0x01]).unwrap(), Value::Bool(false));
+        assert_eq!(decode(&[0x02]).unwrap(), Value::Bool(true));
     }
 
     #[test]
     fn decode_int() {
         // Int 1 -> 0x10 0x01
-        assert_eq!(Decoder::decode(&[0x10, 0x01]), Ok(Value::Int(1)));
+        assert_eq!(decode(&[0x10, 0x01]), Ok(Value::Int(1)));
     }
 
     // strings and bytes
@@ -28,13 +28,13 @@ mod tests {
         // 'hi'
         let bytes = vec![0x20, 0x02, b'h', b'i'];
 
-        assert_eq!(Decoder::decode(&bytes), Ok(Value::String("hi".into())));
+        assert_eq!(decode(&bytes), Ok(Value::String("hi".into())));
     }
 
     #[test]
     fn decode_bytes() {
         let bytes = vec![0x21, 0x02, 0xaa, 0xbb];
-        assert_eq!(Decoder::decode(&bytes), Ok(Value::Bytes(vec![0xaa, 0xbb])));
+        assert_eq!(decode(&bytes), Ok(Value::Bytes(vec![0xaa, 0xbb])));
     }
 
     // list decoding
@@ -44,7 +44,7 @@ mod tests {
         let bytes = vec![0x30, 0x02, 0x10, 0x01, 0x10, 0x02];
 
         assert_eq!(
-            Decoder::decode(&bytes),
+            decode(&bytes),
             Ok(Value::List(vec![Value::Int(1), Value::Int(2)]))
         );
     }
@@ -62,7 +62,7 @@ mod tests {
         let mut map = std::collections::BTreeMap::new();
         map.insert("a".into(), Value::Int(1));
 
-        assert_eq!(Decoder::decode(&bytes), Ok(Value::Map(map)));
+        assert_eq!(decode(&bytes), Ok(Value::Map(map)));
     }
 
     // nested structures
@@ -83,25 +83,25 @@ mod tests {
             Value::List(vec![Value::Bool(true), Value::Null]),
         );
 
-        assert_eq!(Decoder::decode(&bytes), Ok(Value::Map(map)));
+        assert_eq!(decode(&bytes), Ok(Value::Map(map)));
     }
 
     // safety tests
     #[test]
     fn decode_truncated() {
         let bytes = vec![0x20, 0x05, b'h']; // string length 5, but only 1 byte provided
-        assert_eq!(Decoder::decode(&bytes), Err(DecodeError::UnexpectedEOF));
+        assert_eq!(decode(&bytes), Err(DecodeError::UnexpectedEOF));
     }
 
     #[test]
     fn decode_invalid_tag() {
         let bytes = vec![0xFF]; // invalid tag
-        assert_eq!(Decoder::decode(&bytes), Err(DecodeError::InvalidTag(0xFF)));
+        assert_eq!(decode(&bytes), Err(DecodeError::InvalidTag(0xFF)));
     }
 
     #[test]
     fn decode_trailing_bytes() {
         let bytes = vec![0x00, 0x00]; // null followed by extra byte 
-        assert_eq!(Decoder::decode(&bytes), Err(DecodeError::InvalidTag(0)));
+        assert_eq!(decode(&bytes), Err(DecodeError::InvalidTag(0)));
     }
 }

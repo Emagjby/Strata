@@ -1,7 +1,7 @@
-use std::path::PathBuf;
 use assert_cmd::Command;
 use assert_cmd::cargo_bin_cmd;
 use predicates::prelude::*;
+use std::path::PathBuf;
 
 fn strata() -> Command {
     cargo_bin_cmd!("strata")
@@ -43,6 +43,24 @@ mod tests {
     }
 
     #[test]
+    fn cli_decode_smoke() {
+        let input = temp_file("decode.scb");
+
+        // Encode: Int(1) -> 0x10 0x01
+        fs::write(&input, vec![0x10, 0x01]).unwrap();
+
+        let output = strata()
+            .args(["decode", input.to_str().unwrap()])
+            .output()
+            .unwrap();
+
+        assert!(output.status.success());
+
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        assert!(stdout.contains("Int"));
+    }
+
+    #[test]
     fn cli_hash_st() {
         let input = temp_file("hash.st");
 
@@ -66,5 +84,48 @@ mod tests {
             .args(["hash", input.to_str().unwrap()])
             .assert()
             .success();
+    }
+
+    // more tests
+    #[test]
+    fn cli_decode_map() {
+        let scb = temp_file("decode_map.scb");
+
+        // { 'a': 1 } -> 0x40 0x01 0x20 0x01 'a' 0x10 0x01
+        let bytes = vec![
+            0x40, 0x01, // map with 1 entry
+            0x20, 0x01, b'a', // key: 'a'
+            0x10, 0x01, // value: 1
+        ];
+
+        fs::write(&scb, bytes).unwrap();
+
+        let output = strata()
+            .args(["decode", scb.to_str().unwrap()])
+            .output()
+            .unwrap();
+
+        assert!(output.status.success());
+
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        assert!(stdout.contains("Map"));
+        assert!(stdout.contains("a"));
+    }
+
+    #[test]
+    fn cli_decode_invalid() {
+        let scb = temp_file("decode_invalid.scb");
+
+        // invalid tag 0xFF
+        let bytes = vec![0xFF];
+
+        fs::write(&scb, bytes).unwrap();
+
+        let output = strata()
+            .args(["decode", scb.to_str().unwrap()])
+            .output()
+            .unwrap();
+
+        assert!(!output.status.success());
     }
 }
