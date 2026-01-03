@@ -8,6 +8,24 @@ mod tests {
     use crate::parser::parse;
     use crate::value::Value;
 
+    use crate::decode::decode;
+    use crate::error::DecodeErrorKind;
+
+    fn run_negative_decode_vector(name: &str, expected: DecodeErrorKind) {
+        let base = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("vectors")
+            .join(name);
+
+        let input_path = base.with_extension("hex");
+
+        let bytes = read_hex_file(&input_path);
+
+        let err = decode(&bytes).expect_err("decode should have failed");
+
+        assert_eq!(err.kind, expected, "wrong error kind for vector {}", name);
+    }
+
     fn read_hex_file(path: &Path) -> Vec<u8> {
         let text = fs::read_to_string(path)
             .unwrap_or_else(|_| panic!("failed to read {}", path.display()));
@@ -85,6 +103,33 @@ mod tests {
     #[test]
     fn vector_v2_03_nested_structure() {
         run_vector("v2/03-nested-structure");
+    }
+
+    // negative tests for decoding (northstar v2.1 - 0.2.1)
+    #[test]
+    fn neg_01_invalid_tag() {
+        run_negative_decode_vector("v2.1/neg-01-invalid-tag", DecodeErrorKind::InvalidTag(0x99));
+    }
+
+    #[test]
+    fn neg_02_truncated_string() {
+        run_negative_decode_vector(
+            "v2.1/neg-02-truncated-string",
+            DecodeErrorKind::UnexpectedEOF,
+        );
+    }
+
+    #[test]
+    fn neg_03_varint_overflow() {
+        run_negative_decode_vector(
+            "v2.1/neg-03-varint-overflow",
+            DecodeErrorKind::InvalidVarint,
+        );
+    }
+
+    #[test]
+    fn neg_04_invalid_utf8() {
+        run_negative_decode_vector("v2.1/neg-04-invalid-utf8", DecodeErrorKind::InvalidUtf8);
     }
 
     #[test]
