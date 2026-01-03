@@ -25,46 +25,101 @@ enum Commands {
 }
 
 fn main() {
+    let exit_code = match run() {
+        Ok(()) => 0,
+        Err(err) => report_error(err),
+    };
+
+    std::process::exit(exit_code);
+}
+
+fn run() -> Result<(), strata::error::StrataError> {
     let cli = Cli::parse();
 
     match cli.command {
         Commands::Compile { input, output } => {
-            let source_text = fs::read_to_string(&input).expect("failed to read input");
+            let source_text = fs::read_to_string(&input).map_err(strata::error::StrataError::Io)?;
 
-            let parsed_value = parse(&source_text).expect("parse failed");
+            let ast = parse(&source_text)?;
 
-            let bytes = encode(&parsed_value).unwrap();
+            let bytecode = encode(&ast)?;
 
-            fs::write(&output, bytes).expect("failed to write output");
-        }
+            fs::write(&output, bytecode).map_err(strata::error::StrataError::Io)?;
 
-        Commands::Decode { input } => {
-            let bytes = fs::read(&input).expect("failed to read input");
-
-            let value = decode(&bytes).expect("decode failed");
-
-            // Debug-only, human readable
-            println!("{:#?}", value);
+            Ok(())
         }
 
         Commands::Hash { input } => {
-            let bytes = if input.ends_with(".st") {
-                let source_text = fs::read_to_string(&input).expect("failed to read input");
-                let value = parse(&source_text).expect("parse failed");
-                encode(&value).unwrap()
+            let bytecode = if input.ends_with(".st") {
+                let source_text =
+                    fs::read_to_string(&input).map_err(strata::error::StrataError::Io)?;
+                let ast = parse(&source_text)?;
+                encode(&ast)?
             } else {
-                fs::read(&input).expect("failed to read input")
+                fs::read(&input).map_err(strata::error::StrataError::Io)?
             };
 
-            let hash = blake3::hash(&bytes);
-
+            let hash = blake3::hash(&bytecode);
             println!("{}", hash.to_hex());
+
+            Ok(())
+        }
+        Commands::Decode { input } => {
+            let bytecode = fs::read(&input).map_err(strata::error::StrataError::Io)?;
+
+            let ast = decode(&bytecode)?;
+
+            println!("{:#?}", ast);
+
+            Ok(())
+        }
+        Commands::Fmt { input } => {
+            let source_text = fs::read_to_string(&input).map_err(strata::error::StrataError::Io)?;
+
+            let ast = parse(&source_text)?;
+
+            println!("{:#?}", ast);
+
+            Ok(())
+        }
+    }
+}
+
+fn report_error(err: strata::error::StrataError) -> i32 {
+    use strata::error::StrataError::*;
+
+    match err {
+        Parse(e) => {
+            eprintln!("error: parse failed");
+            eprintln!("reason: {:?}", e.kind);
+            eprintln!("line: {}", e.span.line);
+            eprintln!("column: {}", e.span.column);
+            1
         }
 
-        Commands::Fmt { input } => {
-            let source_text = fs::read_to_string(&input).expect("failed to read input");
-            let value = parse(&source_text).expect("parse failed");
-            println!("{:#?}", value);
+        Decode(e) => {
+            eprintln!("error: decode failed");
+            eprintln!("reason: {:?}", e.kind);
+            eprintln!("offset: {}", e.offset);
+            1
+        }
+
+        Encode(e) => {
+            eprintln!("error: encode failed");
+            eprintln!("reason: {:?}", e);
+            1
+        }
+
+        Io(e) => {
+            eprintln!("error: I/O failure");
+            eprintln!("reason: {}", e);
+            2
+        }
+
+        Internal(msg) => {
+            eprintln!("error: internal error");
+            eprintln!("reason: {}", msg);
+            100
         }
     }
 }
