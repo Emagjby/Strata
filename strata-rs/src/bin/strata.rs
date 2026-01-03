@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 use std::fs;
 
 use strata::decode::decode;
-use strata::encode::encode_value;
+use strata::encode::encode;
 use strata::parser::parse;
 
 #[derive(Parser)]
@@ -33,7 +33,7 @@ fn main() {
 
             let parsed_value = parse(&source_text).expect("parse failed");
 
-            let bytes = encode_value(&parsed_value);
+            let bytes = encode(&parsed_value).unwrap();
 
             fs::write(&output, bytes).expect("failed to write output");
         }
@@ -51,7 +51,7 @@ fn main() {
             let bytes = if input.ends_with(".st") {
                 let source_text = fs::read_to_string(&input).expect("failed to read input");
                 let value = parse(&source_text).expect("parse failed");
-                encode_value(&value)
+                encode(&value).unwrap()
             } else {
                 fs::read(&input).expect("failed to read input")
             };

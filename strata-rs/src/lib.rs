@@ -1,5 +1,6 @@
 pub mod decode;
 pub mod encode;
+pub mod error;
 pub mod framing;
 pub mod hash;
 pub mod lexer;

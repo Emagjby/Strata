@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::decode::{DecodeError, decode};
+    use crate::decode::decode;
+    use crate::error::DecodeErrorKind;
     use crate::value::Value;
 
     // null/bool/int
@@ -86,22 +87,31 @@ mod tests {
         assert_eq!(decode(&bytes), Ok(Value::Map(map)));
     }
 
-    // safety tests
+    // safety tests v2.1 strict
     #[test]
-    fn decode_truncated() {
-        let bytes = vec![0x20, 0x05, b'h']; // string length 5, but only 1 byte provided
-        assert_eq!(decode(&bytes), Err(DecodeError::UnexpectedEOF));
+    fn decode_truncated_string() {
+        let bytes = vec![0x20, 0x05, b'h']; // length 5, but only 1 byte provided
+
+        let err = decode(&bytes).unwrap_err();
+        assert_eq!(err.kind, DecodeErrorKind::UnexpectedEOF);
+        assert_eq!(err.offset, 2);
     }
 
     #[test]
     fn decode_invalid_tag() {
         let bytes = vec![0xFF]; // invalid tag
-        assert_eq!(decode(&bytes), Err(DecodeError::InvalidTag(0xFF)));
+
+        let err = decode(&bytes).unwrap_err();
+        assert_eq!(err.kind, DecodeErrorKind::InvalidTag(0xFF));
+        assert_eq!(err.offset, 1);
     }
 
     #[test]
     fn decode_trailing_bytes() {
-        let bytes = vec![0x00, 0x00]; // null followed by extra byte 
-        assert_eq!(decode(&bytes), Err(DecodeError::InvalidTag(0)));
+        let bytes = vec![0x00, 0x00];
+
+        let err = decode(&bytes).unwrap_err();
+        assert_eq!(err.kind, DecodeErrorKind::TrailingBytes);
+        assert_eq!(err.offset, 1);
     }
 }

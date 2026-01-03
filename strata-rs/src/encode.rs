@@ -1,3 +1,6 @@
+use crate::error::EncodeError;
+use crate::value::Value;
+
 pub fn encode_uleb128(mut value: u64, out: &mut Vec<u8>) {
     loop {
         let mut byte = (value & 0x7F) as u8;
@@ -18,8 +21,7 @@ pub fn encode_sleb128(mut value: i64, out: &mut Vec<u8>) {
         let sign_bit = byte & 0x40;
         value >>= 7;
 
-        let done = (value == 0 && sign_bit == 0)
-            || (value == -1 && sign_bit != 0);
+        let done = (value == 0 && sign_bit == 0) || (value == -1 && sign_bit != 0);
 
         out.push(if done { byte } else { byte | 0x80 });
 
@@ -29,15 +31,13 @@ pub fn encode_sleb128(mut value: i64, out: &mut Vec<u8>) {
     }
 }
 
-use crate::value::Value;
-
-pub fn encode_value(value: &Value) -> Vec<u8> {
+pub fn encode(value: &Value) -> Result<Vec<u8>, EncodeError> {
     let mut out = Vec::new();
-    encode_into(value, &mut out);
-    out
+    encode_into(value, &mut out)?;
+    Ok(out)
 }
 
-fn encode_into(value: &Value, out: &mut Vec<u8>) {
+fn encode_into(value: &Value, out: &mut Vec<u8>) -> Result<(), EncodeError> {
     match value {
         Value::Null => {
             out.push(0x00);
@@ -58,6 +58,11 @@ fn encode_into(value: &Value, out: &mut Vec<u8>) {
 
         Value::String(string) => {
             out.push(0x20);
+
+            if !string.is_char_boundary(string.len()) {
+                return Err(EncodeError::InvalidUtf8);
+            }
+
             let bytes = string.as_bytes();
             encode_uleb128(bytes.len() as u64, out);
             out.extend_from_slice(bytes);
@@ -73,7 +78,7 @@ fn encode_into(value: &Value, out: &mut Vec<u8>) {
             out.push(0x30);
             encode_uleb128(items.len() as u64, out);
             for item in items {
-                encode_into(item, out);
+                encode_into(item, out)?;
             }
         }
 
@@ -85,12 +90,19 @@ fn encode_into(value: &Value, out: &mut Vec<u8>) {
             for (key, value) in map {
                 // key encoded exactly like a String
                 out.push(0x20);
+
+                if !key.is_char_boundary(key.len()) {
+                    return Err(EncodeError::InvalidUtf8);
+                }
+
                 let key_bytes = key.as_bytes();
                 encode_uleb128(key_bytes.len() as u64, out);
                 out.extend_from_slice(key_bytes);
 
-                encode_into(value, out);
+                encode_into(value, out)?;
             }
         }
     }
+
+    Ok(())
 }

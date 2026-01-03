@@ -1,42 +1,42 @@
+use crate::error::{DecodeError, DecodeErrorKind};
 use crate::value::Value;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum DecodeError {
-    UnexpectedEOF,
-    InvalidTag(u8),
-    InvalidVarint,
-    InvalidUtf8,
-}
 
 pub struct Decoder<'a> {
     input: &'a [u8],
-    position: usize,
+    offset: usize,
 }
 
 impl<'a> Decoder<'a> {
     fn new(input: &'a [u8]) -> Self {
-        Self { input, position: 0 }
+        Self { input, offset: 0 }
+    }
+
+    fn err(&self, kind: DecodeErrorKind) -> DecodeError {
+        DecodeError {
+            kind,
+            offset: self.offset,
+        }
     }
 
     fn remaining(&self) -> usize {
-        self.input.len() - self.position
+        self.input.len() - self.offset
     }
 
     fn read_byte(&mut self) -> Result<u8, DecodeError> {
-        if self.position >= self.input.len() {
-            return Err(DecodeError::UnexpectedEOF);
+        if self.offset >= self.input.len() {
+            return Err(self.err(DecodeErrorKind::UnexpectedEOF));
         }
-        let byte = self.input[self.position];
-        self.position += 1;
+        let byte = self.input[self.offset];
+        self.offset += 1;
         Ok(byte)
     }
 
     fn read_slice(&mut self, len: usize) -> Result<&'a [u8], DecodeError> {
         if self.remaining() < len {
-            return Err(DecodeError::UnexpectedEOF);
+            return Err(self.err(DecodeErrorKind::UnexpectedEOF));
         }
-        let slice = &self.input[self.position..self.position + len];
-        self.position += len;
+        let slice = &self.input[self.offset..self.offset + len];
+        self.offset += len;
         Ok(slice)
     }
 
@@ -49,7 +49,7 @@ impl<'a> Decoder<'a> {
             let value = (byte & 0x7F) as u64;
 
             if shift >= 64 {
-                return Err(DecodeError::InvalidVarint);
+                return Err(self.err(DecodeErrorKind::InvalidVarint));
             }
 
             result |= value << shift;
@@ -79,7 +79,7 @@ impl<'a> Decoder<'a> {
             }
 
             if shift >= 64 {
-                return Err(DecodeError::InvalidVarint);
+                return Err(self.err(DecodeErrorKind::InvalidVarint));
             }
         }
 
@@ -105,8 +105,12 @@ impl<'a> Decoder<'a> {
 
             0x20 => {
                 let len = self.decode_uleb128()? as usize;
+                let start = self.offset;
                 let bytes = self.read_slice(len)?;
-                let s = std::str::from_utf8(bytes).map_err(|_| DecodeError::InvalidUtf8)?;
+                let s = std::str::from_utf8(bytes).map_err(|_| DecodeError {
+                    kind: DecodeErrorKind::InvalidUtf8,
+                    offset: start,
+                })?;
 
                 Ok(Value::String(s.to_string()))
             }
@@ -133,7 +137,7 @@ impl<'a> Decoder<'a> {
                 for _ in 0..count {
                     let key = match self.decode_value()? {
                         Value::String(s) => s,
-                        _ => return Err(DecodeError::InvalidTag(0)),
+                        _ => return Err(self.err(DecodeErrorKind::InvalidTag(tag))),
                     };
                     let value = self.decode_value()?;
                     map.insert(key, value);
@@ -141,7 +145,7 @@ impl<'a> Decoder<'a> {
                 Ok(Value::Map(map))
             }
 
-            other => Err(DecodeError::InvalidTag(other)),
+            other => Err(self.err(DecodeErrorKind::InvalidTag(other))),
         }
     }
 }
@@ -151,7 +155,10 @@ pub fn decode(input: &[u8]) -> Result<Value, DecodeError> {
     let value = decoder.decode_value()?;
 
     if decoder.remaining() != 0 {
-        return Err(DecodeError::InvalidTag(0)); // Extra data after valid value
+        return Err(DecodeError {
+            kind: DecodeErrorKind::TrailingBytes,
+            offset: decoder.offset,
+        });
     }
 
     Ok(value)

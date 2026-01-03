@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use crate::encode::encode_value;
+use crate::encode::encode;
 use crate::hash::hash_value;
 use crate::parser::parse;
 
@@ -45,7 +45,7 @@ pub fn run_vector(name: &str) {
     let value = parse(&source_text)
         .unwrap_or_else(|| panic!("parse failed for {}", strata_source_path.display()));
 
-    let encoded = encode_value(&value);
+    let encoded = encode(&value).unwrap();
 
     let hash = hash_value(&value);
 

@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::encode::{encode_uleb128, encode_sleb128, encode_value};
-    use crate::value::Value;
+    use crate::encode::{encode, encode_sleb128, encode_uleb128};
     use crate::framing::encode_framed;
+    use crate::value::Value;
 
     #[test]
     fn uleb128_basic() {
@@ -49,31 +49,31 @@ mod tests {
     // primitives
     #[test]
     fn encode_null() {
-        assert_eq!(encode_value(&Value::Null), vec![0x00]);
+        assert_eq!(encode(&Value::Null).unwrap(), vec![0x00]);
     }
 
     #[test]
     fn encode_bool() {
-        assert_eq!(encode_value(&Value::Bool(false)), vec![0x01]);
-        assert_eq!(encode_value(&Value::Bool(true)), vec![0x02]);
+        assert_eq!(encode(&Value::Bool(false)).unwrap(), vec![0x01]);
+        assert_eq!(encode(&Value::Bool(true)).unwrap(), vec![0x02]);
     }
 
     #[test]
     fn encode_int() {
-        assert_eq!(encode_value(&Value::Int(1)), vec![0x10, 0x01]);
+        assert_eq!(encode(&Value::Int(1)).unwrap(), vec![0x10, 0x01]);
     }
 
     // string & bytes
     #[test]
     fn encode_string() {
         let value = Value::String("hi".into());
-        assert_eq!(encode_value(&value), vec![0x20, 0x02, b'h', b'i']);
+        assert_eq!(encode(&value).unwrap(), vec![0x20, 0x02, b'h', b'i']);
     }
 
     #[test]
     fn encode_bytes() {
         let value = Value::Bytes(vec![0xDE, 0xAD]);
-        assert_eq!(encode_value(&value), vec![0x21, 0x02, 0xDE, 0xAD]);
+        assert_eq!(encode(&value).unwrap(), vec![0x21, 0x02, 0xDE, 0xAD]);
     }
 
     // lists
@@ -81,7 +81,7 @@ mod tests {
     fn encode_list() {
         let value = Value::List(vec![Value::Int(1), Value::Int(2)]);
         assert_eq!(
-            encode_value(&value),
+            encode(&value).unwrap(),
             vec![0x30, 0x02, 0x10, 0x01, 0x10, 0x02]
         );
     }
@@ -98,11 +98,9 @@ mod tests {
         let value = Value::Map(map);
 
         assert_eq!(
-            encode_value(&value),
+            encode(&value).unwrap(),
             vec![
-                0x40, 0x02,
-                0x20, 0x01, b'a', 0x10, 0x01,
-                0x20, 0x01, b'b', 0x10, 0x02,
+                0x40, 0x02, 0x20, 0x01, b'a', 0x10, 0x01, 0x20, 0x01, b'b', 0x10, 0x02,
             ]
         );
     }
@@ -110,22 +108,15 @@ mod tests {
     // nested structures
     #[test]
     fn encode_nested() {
-        let value = Value::List(vec![
-            Value::Map({
-                let mut m = std::collections::BTreeMap::new();
-                m.insert("x".into(), Value::Int(1));
-                m
-            })
-        ]);
+        let value = Value::List(vec![Value::Map({
+            let mut m = std::collections::BTreeMap::new();
+            m.insert("x".into(), Value::Int(1));
+            m
+        })]);
 
         assert_eq!(
-            encode_value(&value),
-            vec![
-                0x30, 0x01,
-                0x40, 0x01,
-                0x20, 0x01, b'x',
-                0x10, 0x01
-            ]
+            encode(&value).unwrap(),
+            vec![0x30, 0x01, 0x40, 0x01, 0x20, 0x01, b'x', 0x10, 0x01]
         );
     }
 
@@ -134,18 +125,14 @@ mod tests {
     fn framed_vs_unframed() {
         let value = Value::Int(1);
 
-        let unframed = encode_value(&value);
+        let unframed = encode(&value).unwrap();
         let framed = encode_framed(&value);
 
         assert_eq!(unframed, vec![0x10, 0x01]);
 
         assert_eq!(
             framed,
-            vec![
-                b'S', b'T', b'R', b'A', b'T', b'A', b'1',
-                0x01,
-                0x10, 0x01
-            ]
+            vec![b'S', b'T', b'R', b'A', b'T', b'A', b'1', 0x01, 0x10, 0x01]
         );
     }
 }

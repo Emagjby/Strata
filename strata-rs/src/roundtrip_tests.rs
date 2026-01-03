@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::decode::decode;
-    use crate::encode::encode_value;
+    use crate::encode::encode;
     use crate::parser::parse;
 
     #[test]
@@ -15,7 +15,7 @@ mod tests {
         "#;
 
         let v1 = parse(input).expect("Parsing failed");
-        let bytes = encode_value(&v1);
+        let bytes = encode(&v1).unwrap();
         let v2 = decode(&bytes).expect("Decoding failed");
 
         assert_eq!(v1, v2);
@@ -32,7 +32,7 @@ mod tests {
         "#;
 
         let v1 = parse(input).expect("Parsing failed");
-        let bytes = encode_value(&v1);
+        let bytes = encode(&v1).unwrap();
         let v2 = decode(&bytes).expect("Decoding failed");
 
         assert_eq!(v1, v2);
@@ -49,7 +49,7 @@ mod tests {
         "#;
 
         let v1 = parse(input).expect("Parsing failed");
-        let bytes = encode_value(&v1);
+        let bytes = encode(&v1).unwrap();
         let v2 = decode(&bytes).expect("Decoding failed");
 
         assert_eq!(v1, v2);

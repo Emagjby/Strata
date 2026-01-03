@@ -6,54 +6,68 @@ mod tests {
     fn lex_identifiers_and_keywords() {
         let mut lexer = Lexer::new("foo null true false bar");
 
-        assert_eq!(lexer.next_token(), Some(Token::Ident("foo".into())));
-        assert_eq!(lexer.next_token(), Some(Token::Null));
-        assert_eq!(lexer.next_token(), Some(Token::True));
-        assert_eq!(lexer.next_token(), Some(Token::False));
-        assert_eq!(lexer.next_token(), Some(Token::Ident("bar".into())));
-        assert_eq!(lexer.next_token(), None);
+        assert_eq!(
+            lexer.next_token().unwrap().kind,
+            TokenKind::Ident("foo".into())
+        );
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::Null);
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::True);
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::False);
+        assert_eq!(
+            lexer.next_token().unwrap().kind,
+            TokenKind::Ident("bar".into())
+        );
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::EOF);
     }
 
     #[test]
     fn lex_integers() {
         let mut lexer = Lexer::new("0 42 -7 -0");
 
-        assert_eq!(lexer.next_token(), Some(Token::Int(0)));
-        assert_eq!(lexer.next_token(), Some(Token::Int(42)));
-        assert_eq!(lexer.next_token(), Some(Token::Int(-7)));
-        assert_eq!(lexer.next_token(), Some(Token::Int(0)));
-        assert_eq!(lexer.next_token(), None);
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::Int(0));
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::Int(42));
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::Int(-7));
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::Int(0));
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::EOF);
     }
 
     #[test]
     fn lex_bytes_literal() {
         let mut lexer = Lexer::new("0xDEADBEEF");
 
-        assert_eq!(lexer.next_token(), Some(Token::Bytes(vec![0xDE, 0xAD, 0xBE, 0xEF])));
-        assert_eq!(lexer.next_token(), None);
+        assert_eq!(
+            lexer.next_token().unwrap().kind,
+            TokenKind::Bytes(vec![0xDE, 0xAD, 0xBE, 0xEF])
+        );
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::EOF);
     }
 
     #[test]
     fn lex_string_with_escapes() {
         let mut lexer = Lexer::new(r#""hello\n\"world\"""#);
 
-        assert_eq!(lexer.next_token(), Some(Token::String("hello\n\"world\"".into())));
-        assert_eq!(lexer.next_token(), None);
+        assert_eq!(
+            lexer.next_token().unwrap().kind,
+            TokenKind::String("hello\n\"world\"".into())
+        );
+        assert_eq!(lexer.next_token().unwrap().kind, TokenKind::EOF);
     }
 
     #[test]
     fn lex_mixed_input() {
-        let mut lexer = Lexer::new(r#"
+        let mut lexer = Lexer::new(
+            r#"
             user {
                 id: 42,
                 active: true,
                 hash: 0xFF00
             }
-        "#);
+        "#,
+        );
 
-        use Token::*;
+        use TokenKind::*;
 
-        let exp = [
+        let expected = [
             Ident("user".into()),
             LBrace,
             Ident("id".to_string()),
@@ -67,13 +81,14 @@ mod tests {
             Ident("hash".to_string()),
             Colon,
             Bytes(vec![0xFF, 0x00]),
-            RBrace
+            RBrace,
         ];
 
-        for tok in exp {
-            assert_eq!(lexer.next_token(), Some(tok));
+        for exp in expected {
+            let tok = lexer.next_token().unwrap();
+            assert_eq!(tok.kind, exp);
         }
 
-        assert_eq!(lexer.next_token(), None);
+        assert_eq!(lexer.next_token().unwrap().kind, EOF);
     }
 }
