@@ -1,107 +1,94 @@
 #[cfg(test)]
 mod tests {
-    use crate::parser::Parser;
+    use crate::parser::parse;
     use crate::value::Value;
 
     #[test]
     fn parse_null() {
-        let mut parser = Parser::new("null");
-        assert_eq!(parser.parse_value(), Some(Value::Null));
+        let value = parse("null");
+        assert_eq!(value.unwrap(), Value::Null);
     }
- 
+
     #[test]
     fn parse_integer() {
-        let mut parser = Parser::new("42");
-        assert_eq!(parser.parse_value(), Some(Value::Int(42)));
+        let value = parse("42");
+        assert_eq!(value.unwrap(), Value::Int(42));
     }
 
     #[test]
     fn parse_string() {
-        let mut parser = Parser::new(r#""hello""#);
-        assert_eq!(parser.parse_value(), Some(Value::String("hello".into())));
+        let value = parse(r#""hello""#);
+        assert_eq!(value.unwrap(), Value::String("hello".into()));
     }
 
     #[test]
     fn parse_empty_list() {
-        let mut parser = Parser::new("[]");
-        assert_eq!(parser.parse_value(), Some(Value::List(vec![])));
+        let value = parse("[]");
+        assert_eq!(value.unwrap(), Value::List(vec![]));
     }
 
     #[test]
     fn parse_list_of_ints() {
-        let mut parser = Parser::new("[1, 2, 3]");
+        let value = parse("[1, 2, 3]");
         assert_eq!(
-            parser.parse_value(),
-            Some(Value::List(vec![
-                Value::Int(1),
-                Value::Int(2),
-                Value::Int(3),
-            ]))
+            value.unwrap(),
+            Value::List(vec![Value::Int(1), Value::Int(2), Value::Int(3),])
         );
     }
 
     #[test]
     fn parse_list_with_trailing_comma() {
-        let mut parser = Parser::new("[1, 2,]");
+        let value = parse("[1, 2,]");
         assert_eq!(
-            parser.parse_value(),
-            Some(Value::List(vec![
-                Value::Int(1),
-                Value::Int(2),
-            ]))
+            value.unwrap(),
+            Value::List(vec![Value::Int(1), Value::Int(2),])
         );
     }
 
     #[test]
     fn parse_nested_list() {
-        let mut parser = Parser::new("[1, [2, 3]]");
+        let value = parse("[1, [2, 3]]");
         assert_eq!(
-            parser.parse_value(),
-            Some(Value::List(vec![
+            value.unwrap(),
+            Value::List(vec![
                 Value::Int(1),
-                Value::List(vec![
-                    Value::Int(2),
-                    Value::Int(3),
-                ])
-            ]))
+                Value::List(vec![Value::Int(2), Value::Int(3),])
+            ])
         );
     }
 
     #[test]
     fn parse_empty_map() {
-        let mut parser = Parser::new("{}");
-        assert_eq!(
-            parser.parse_value(),
-            Some(Value::Map(Default::default()))
-        );
+        let value = parse("{}");
+        assert_eq!(value.unwrap(), Value::Map(Default::default()));
     }
 
     #[test]
     fn parse_simple_map() {
-        let mut parser = Parser::new("{ a: 1, b: 2 }");
+        let value = parse("{ a: 1, b: 2 }");
 
         use std::collections::BTreeMap;
         let mut expected = BTreeMap::new();
         expected.insert("a".into(), Value::Int(1));
         expected.insert("b".into(), Value::Int(2));
 
-        assert_eq!(parser.parse_value(), Some(Value::Map(expected)));
+        assert_eq!(value.unwrap(), Value::Map(expected));
     }
 
     #[test]
     fn parse_map_with_trailing_comma() {
-        let mut parser = Parser::new("{ a: 1, }");
+        let value = parse("{ a: 1, }");
 
         use std::collections::BTreeMap;
         let mut expected = BTreeMap::new();
         expected.insert("a".into(), Value::Int(1));
 
-        assert_eq!(parser.parse_value(), Some(Value::Map(expected)));
+        assert_eq!(value.unwrap(), Value::Map(expected));
     }
 
     #[test]
     fn parse_nested_map() {
-        let mut parser = Parser::new("{ outer: { inner: 42 } }");
+        let value = parse("{ outer: { inner: 42 } }");
 
         use std::collections::BTreeMap;
 
@@ -111,12 +98,12 @@ mod tests {
         let mut outer_map = BTreeMap::new();
         outer_map.insert("outer".into(), Value::Map(inner_map));
 
-        assert_eq!(parser.parse_value(), Some(Value::Map(outer_map)));
+        assert_eq!(value.unwrap(), Value::Map(outer_map));
     }
 
     #[test]
     fn parse_map_shorthand() {
-        let mut parser = Parser::new("user { id: 42 }");
+        let value = parse("user { id: 42 }");
 
         use std::collections::BTreeMap;
 
@@ -126,12 +113,12 @@ mod tests {
         let mut outer_map = BTreeMap::new();
         outer_map.insert("user".into(), Value::Map(inner_map));
 
-        assert_eq!(parser.parse_value(), Some(Value::Map(outer_map)));
+        assert_eq!(value.unwrap(), Value::Map(outer_map));
     }
 
     #[test]
     fn parse_nested_shorthand() {
-        let mut parser = Parser::new("a { b { c: 1 } }");
+        let value = parse("a { b { c: 1 } }");
 
         use std::collections::BTreeMap;
 
@@ -144,7 +131,7 @@ mod tests {
         let mut a_map = BTreeMap::new();
         a_map.insert("a".into(), Value::Map(b_map));
 
-        assert_eq!(parser.parse_value(), Some(Value::Map(a_map)));
+        assert_eq!(value.unwrap(), Value::Map(a_map));
     }
 
     #[test]
@@ -159,7 +146,7 @@ mod tests {
             }
         "#;
 
-        let mut parser = Parser::new(input);
+        let value = parse(input);
 
         use std::collections::BTreeMap;
 
@@ -178,21 +165,21 @@ mod tests {
         user_map.insert(
             "avatar_hash".into(),
             Value::Bytes(vec![
-                0x9f, 0x86, 0xd0, 0x81, 0x88, 0x4c, 0x7d, 0x65,
-                0x9a, 0x2f, 0xea, 0xa0, 0xc5, 0x5a, 0xd0, 0x15,
+                0x9f, 0x86, 0xd0, 0x81, 0x88, 0x4c, 0x7d, 0x65, 0x9a, 0x2f, 0xea, 0xa0, 0xc5, 0x5a,
+                0xd0, 0x15,
             ]),
         );
 
         let mut root_map = BTreeMap::new();
         root_map.insert("user".into(), Value::Map(user_map));
 
-        assert_eq!(parser.parse_value(), Some(Value::Map(root_map)));
+        assert_eq!(value.unwrap(), Value::Map(root_map));
     }
 
     #[test]
     fn int_out_of_range_rejected() {
         let input = "9223372036854775808";
-        assert!(crate::parser::parse(input).is_none());
+        assert!(parse(input).is_err());
     }
 
     #[test]
@@ -204,7 +191,7 @@ mod tests {
             }
         "#;
 
-        let parsed_value = crate::parser::parse(input).unwrap();
+        let value = parse(input);
 
         use std::collections::BTreeMap;
 
@@ -214,6 +201,6 @@ mod tests {
         let mut root_map = BTreeMap::new();
         root_map.insert("a".into(), Value::Map(inner_map));
 
-        assert_eq!(parsed_value, Value::Map(root_map));
+        assert_eq!(value.unwrap(), Value::Map(root_map));
     }
 }

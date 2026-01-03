@@ -1,65 +1,60 @@
-use std::fs;
-use std::path::Path;
-
-use crate::encode::encode;
-use crate::hash::hash_value;
-use crate::parser::parse;
-
-#[allow(dead_code)]
-fn read_hex_file(path: &Path) -> Vec<u8> {
-    let text =
-        fs::read_to_string(path).unwrap_or_else(|_| panic!("failed to read {}", path.display()));
-
-    let text = text.trim();
-
-    assert!(
-        text.len().is_multiple_of(2),
-        "hex file has odd length: {}",
-        path.display()
-    );
-
-    let mut out = Vec::with_capacity(text.len() / 2);
-    for i in (0..text.len()).step_by(2) {
-        let byte = u8::from_str_radix(&text[i..i + 2], 16)
-            .unwrap_or_else(|_| panic!("invalid hex in {}", path.display()));
-        out.push(byte);
-    }
-
-    out
-}
-
-#[allow(dead_code)]
-pub fn run_vector(name: &str) {
-    let base = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("vectors")
-        .join(name);
-
-    let strata_source_path = base.with_extension("st");
-    let scb_path = base.with_extension("scb.hex");
-    let hash_path = base.with_extension("hash.hex");
-
-    let source_text = fs::read_to_string(&strata_source_path)
-        .unwrap_or_else(|_| panic!("failed to read {}", strata_source_path.display()));
-
-    let value = parse(&source_text)
-        .unwrap_or_else(|| panic!("parse failed for {}", strata_source_path.display()));
-
-    let encoded = encode(&value).unwrap();
-
-    let hash = hash_value(&value);
-
-    let exp_scb = read_hex_file(&scb_path);
-    let exp_hash = read_hex_file(&hash_path);
-
-    assert_eq!(encoded, exp_scb, "SCB mismatch for vector {}", name);
-
-    assert_eq!(hash.to_vec(), exp_hash, "hash mismatch for vector {}", name);
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::semantic_vectors::run_vector;
+    use std::fs;
+    use std::path::Path;
+
+    use crate::encode::encode;
+    use crate::hash::hash_value;
+    use crate::parser::parse;
+    use crate::value::Value;
+
+    fn read_hex_file(path: &Path) -> Vec<u8> {
+        let text = fs::read_to_string(path)
+            .unwrap_or_else(|_| panic!("failed to read {}", path.display()));
+
+        let text = text.trim();
+
+        assert!(
+            text.len().is_multiple_of(2),
+            "hex file has odd length: {}",
+            path.display()
+        );
+
+        (0..text.len())
+            .step_by(2)
+            .map(|i| {
+                u8::from_str_radix(&text[i..i + 2], 16).unwrap_or_else(|_| {
+                    panic!("invalid hex in {}: {}", path.display(), &text[i..i + 2])
+                })
+            })
+            .collect()
+    }
+
+    fn run_vector(name: &str) {
+        let base = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("vectors")
+            .join(name);
+
+        let strata_source_path = base.with_extension("st");
+        let scb_path = base.with_extension("scb.hex");
+        let hash_path = base.with_extension("hash.hex");
+
+        let source_text = fs::read_to_string(&strata_source_path)
+            .unwrap_or_else(|_| panic!("failed to read {}", strata_source_path.display()));
+
+        let value = parse(&source_text).expect("parse failed for vector");
+
+        let encoded = encode(&value).expect("encode failed");
+
+        let hash = hash_value(&value);
+
+        let exp_scb = read_hex_file(&scb_path);
+        let exp_hash = read_hex_file(&hash_path);
+
+        assert_eq!(encoded, exp_scb, "SCB mismatch for vector {}", name);
+        assert_eq!(hash.to_vec(), exp_hash, "hash mismatch for vector {}", name);
+    }
 
     #[test]
     fn vector_v1_01_basic() {
@@ -92,10 +87,6 @@ mod tests {
         run_vector("v2/03-nested-structure");
     }
 
-    // other tests - to move later
-    use crate::parser::Parser;
-    use crate::value::Value;
-
     #[test]
     fn semantic_vector_config() {
         let input = r#"
@@ -107,7 +98,7 @@ mod tests {
             }
         "#;
 
-        let mut p = Parser::new(input);
+        let value = parse(input);
 
         use std::collections::BTreeMap;
 
@@ -120,7 +111,7 @@ mod tests {
         let mut root = BTreeMap::new();
         root.insert("config".into(), Value::Map(config));
 
-        assert_eq!(p.parse_value(), Some(Value::Map(root)));
+        assert_eq!(value.unwrap(), Value::Map(root));
     }
 
     #[test]
@@ -133,7 +124,7 @@ mod tests {
             }
         "#;
 
-        let mut p = Parser::new(input);
+        let value = parse(input);
 
         use std::collections::BTreeMap;
 
@@ -145,7 +136,7 @@ mod tests {
         let mut root = BTreeMap::new();
         root.insert("data".into(), Value::Map(data));
 
-        assert_eq!(p.parse_value(), Some(Value::Map(root)));
+        assert_eq!(value.unwrap(), Value::Map(root));
     }
 
     #[test]
@@ -158,7 +149,7 @@ mod tests {
             }
         "#;
 
-        let mut p = Parser::new(input);
+        let value = parse(input);
 
         use std::collections::BTreeMap;
 
@@ -183,6 +174,6 @@ mod tests {
         let mut root = BTreeMap::new();
         root.insert("profile".into(), Value::Map(profile));
 
-        assert_eq!(p.parse_value(), Some(Value::Map(root)));
+        assert_eq!(value.unwrap(), Value::Map(root));
     }
 }

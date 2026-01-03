@@ -1,36 +1,49 @@
-use crate::lexer::{Lexer, Token};
-use std::collections::BTreeMap;
+use crate::error::{ParseError, ParseErrorKind};
+use crate::lexer::{Lexer, Token, TokenKind};
 use crate::value::Value;
+use std::collections::BTreeMap;
 
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
-    lookahead: Option<Token>,
+    lookahead: Token,
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(input: &'a str) -> Self {
+    pub fn new(input: &'a str) -> Result<Self, ParseError> {
         let mut lexer = Lexer::new(input);
-        let lookahead = lexer.next_token();
-        Self { lexer, lookahead }
+        let lookahead = lexer.next_token()?;
+
+        Ok(Self { lexer, lookahead })
     }
 
-    fn advance(&mut self) {
-        self.lookahead = self.lexer.next_token();
+    fn advance(&mut self) -> Result<(), ParseError> {
+        self.lookahead = self.lexer.next_token()?;
+        Ok(())
     }
 
-    fn parse_list(&mut self) -> Option<Value> {
-        // expect '['
-        if self.lookahead != Some(Token::LBracket) {
-            return None;
+    fn expect(&mut self, kind: TokenKind) -> Result<(), ParseError> {
+        if self.lookahead.kind == kind {
+            self.advance()
+        } else {
+            Err(ParseError {
+                kind: ParseErrorKind::UnexpectedToken {
+                    expected: "different token",
+                    found: "unexpected token",
+                },
+                span: self.lookahead.span,
+            })
         }
-        self.advance(); // consume '['
+    }
+
+    fn parse_list(&mut self) -> Result<Value, ParseError> {
+        self.expect(TokenKind::LBracket)?;
 
         let mut items = Vec::new();
 
         // empty list
-        if self.lookahead == Some(Token::RBracket) {
-            self.advance(); // consume ']'
-            return Some(Value::List(items));
+        if self.lookahead.kind == TokenKind::RBracket {
+            self.advance()?; // consume ']'
+            return Ok(Value::List(items));
         }
 
         loop {
@@ -38,164 +51,192 @@ impl<'a> Parser<'a> {
             let element = self.parse_value()?;
             items.push(element);
 
-            match self.lookahead {
-                Some(Token::Comma) => {
-                    self.advance(); // consume ','
+            match self.lookahead.kind {
+                TokenKind::Comma => {
+                    self.advance()?; // consume ','
 
                     // allow trailing comma
-                    if self.lookahead == Some(Token::RBracket) {
+                    if self.lookahead.kind == TokenKind::RBracket {
                         break;
                     }
                 }
-                
-                Some(Token::RBracket) => break,
-                _ => return None,
+
+                TokenKind::RBracket => break,
+
+                _ => {
+                    return Err(ParseError {
+                        kind: ParseErrorKind::UnexpectedToken {
+                            expected: "',' or ']'",
+                            found: "token",
+                        },
+                        span: self.lookahead.span,
+                    });
+                }
             }
         }
 
-        // consume closing ']'
-        if self.lookahead != Some(Token::RBracket) {
-            return None;
-        }
-        self.advance();
-
-        Some(Value::List(items))
+        self.expect(TokenKind::RBracket)?;
+        Ok(Value::List(items))
     }
 
-    fn parse_map(&mut self) -> Option<Value> {
-        // expect '{'
-        if self.lookahead != Some(Token::LBrace) {
-            return None;
-        }
-        self.advance(); // consume '{'
-        
+    fn parse_map(&mut self) -> Result<Value, ParseError> {
+        self.expect(TokenKind::LBrace)?;
+
         let mut map = BTreeMap::new();
 
         // empty map
-        if self.lookahead == Some(Token::RBrace) {
-            self.advance(); // consume '}'
-            return Some(Value::Map(map));
+        if self.lookahead.kind == TokenKind::RBrace {
+            self.advance()?; // consume '}'
+            return Ok(Value::Map(map));
         }
 
         loop {
             // key must be identifier
-            let key = match self.lookahead.clone()? {
-                Token::Ident(name) => {
-                    self.advance();
-                    name
+            let key = match &self.lookahead.kind {
+                TokenKind::Ident(name) => {
+                    let key = name.clone();
+                    self.advance()?;
+                    key
                 }
 
-                _ => return None,
+                _ => {
+                    return Err(ParseError {
+                        kind: ParseErrorKind::UnexpectedToken {
+                            expected: "identifier",
+                            found: "token",
+                        },
+                        span: self.lookahead.span,
+                    });
+                }
             };
 
-            let value = if self.lookahead == Some(Token::LBrace) {
+            let value = if self.lookahead.kind == TokenKind::LBrace {
                 // shorthand entry: key { ... }
                 self.parse_map()?
             } else {
                 // normal entry: key : value
-                if self.lookahead != Some(Token::Colon) {
-                    return None;
-                }
-                self.advance(); // consume ':'
+                self.expect(TokenKind::Colon)?;
                 self.parse_value()?
             };
 
             map.insert(key, value);
 
-            match self.lookahead {
-                Some(Token::Comma) => {
-                    self.advance();
+            match self.lookahead.kind {
+                TokenKind::Comma => {
+                    self.advance()?;
 
                     // allow trailing comma
-                    if self.lookahead == Some(Token::RBrace) {
+                    if self.lookahead.kind == TokenKind::RBrace {
                         break;
                     }
                 }
 
-                Some(Token::RBrace) => break,
+                TokenKind::RBrace => break,
 
-                Some(Token::Ident(_)) => {
-                    // continue parsing
+                TokenKind::Ident(_) => {
+                    // implicit separator via newline
+                    continue;
                 }
 
-                _ => return None,
+                _ => {
+                    return Err(ParseError {
+                        kind: ParseErrorKind::UnexpectedToken {
+                            expected: "',' or '}'",
+                            found: "token",
+                        },
+                        span: self.lookahead.span,
+                    });
+                }
             }
         }
 
-        // consume closing '}'
-        if self.lookahead != Some(Token::RBrace) {
-            return None;
-        }
-        self.advance();
-
-        Some(Value::Map(map))
+        self.expect(TokenKind::RBrace)?;
+        Ok(Value::Map(map))
     }
 
-    pub fn parse_value(&mut self) -> Option<Value> {
-        match self.lookahead.clone()? {
-            Token::Null => {
-                self.advance();
-                Some(Value::Null)
+    fn parse_value(&mut self) -> Result<Value, ParseError> {
+        match &self.lookahead.kind {
+            TokenKind::Null => {
+                self.advance()?;
+                Ok(Value::Null)
             }
 
-            Token::True => {
-                self.advance();
-                Some(Value::Bool(true))
+            TokenKind::True => {
+                self.advance()?;
+                Ok(Value::Bool(true))
             }
 
-            Token::False => {
-                self.advance();
-                Some(Value::Bool(false))
+            TokenKind::False => {
+                self.advance()?;
+                Ok(Value::Bool(false))
             }
 
-            Token::Int(number) => {
-                self.advance();
-                Some(Value::Int(number))
+            TokenKind::Int(number) => {
+                let v = *number;
+                self.advance()?;
+                Ok(Value::Int(v))
             }
 
-            Token::String(string) => {
-                self.advance();
-                Some(Value::String(string))
+            TokenKind::String(string) => {
+                let v = string.clone();
+                self.advance()?;
+                Ok(Value::String(v))
             }
 
-
-            Token::Bytes(bytes) => {
-                self.advance();
-                Some(Value::Bytes(bytes))
+            TokenKind::Bytes(bytes) => {
+                let v = bytes.clone();
+                self.advance()?;
+                Ok(Value::Bytes(v))
             }
 
-            Token::Ident(name) => {
-                self.advance();
+            TokenKind::LBracket => self.parse_list(),
+            TokenKind::LBrace => self.parse_map(),
+
+            TokenKind::Ident(name) => {
+                let key = name.clone();
+                self.advance()?;
 
                 // identifier followed by '{' -> shorthand
-                if self.lookahead == Some(Token::LBrace) {
+                if self.lookahead.kind == TokenKind::LBrace {
                     let inner = self.parse_map()?;
-
                     let mut map = BTreeMap::new();
-                    map.insert(name, inner);
-
-                    Some(Value::Map(map))
+                    map.insert(key, inner);
+                    Ok(Value::Map(map))
                 } else {
-                    None
+                    Err(ParseError {
+                        kind: ParseErrorKind::UnexpectedToken {
+                            expected: "map or value",
+                            found: "identifier",
+                        },
+                        span: self.lookahead.span,
+                    })
                 }
             }
 
-            Token::LBracket => self.parse_list(),
-            Token::LBrace => self.parse_map(),
-
-            _ => None,
+            _ => Err(ParseError {
+                kind: ParseErrorKind::UnexpectedToken {
+                    expected: "value",
+                    found: "token",
+                },
+                span: self.lookahead.span,
+            }),
         }
     }
 }
 
-pub fn parse(input: &str) -> Option<Value> {
-    let mut parser = Parser::new(input);
-
+pub fn parse(input: &str) -> Result<Value, ParseError> {
+    let mut parser = Parser::new(input)?;
     let parsed_value = parser.parse_value()?;
 
-    if parser.lookahead.is_some() {
-        return None;
+    if parser.lookahead.kind != TokenKind::EOF {
+        return Err(ParseError {
+            kind: ParseErrorKind::UnexpectedToken {
+                expected: "EOF",
+                found: "extra input",
+            },
+            span: parser.lookahead.span,
+        });
     }
 
-    Some(parsed_value)
+    Ok(parsed_value)
 }
