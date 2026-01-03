@@ -8,6 +8,10 @@ use strata::parser::parse;
 #[derive(Parser)]
 #[command(name = "strata")]
 #[command(about = "Strata CLI")]
+#[command(
+    long_about = "Command-line interface for compiling, decoding, hashing and formatting Strata data."
+)]
+#[command(version = env!("CARGO_PKG_VERSION"))]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -15,13 +19,32 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    Compile { input: String, output: String },
+    /// Compile Strata source (.st) into canonical Strata bytecode (.scb)
+    Compile {
+        /// Input Strata source file (.st)
+        input: String,
 
-    Hash { input: String },
+        /// Output Strata bytecode file (.scb)
+        output: String,
+    },
 
-    Decode { input: String },
+    /// Compute the BLAKE3 hash of a Strata source (.st) or bytecode (.scb) file
+    Hash {
+        /// Input Strata source file (.st) or bytecode file (.scb)
+        input: String,
+    },
 
-    Fmt { input: String },
+    /// Decode Strata bytecode (.scb) into a readable AST format
+    Decode {
+        /// Input Strata bytecode file (.scb)
+        input: String,
+    },
+
+    /// Format Strata source (.st) into a readable AST format
+    Fmt {
+        /// Input Strata source file (.st)
+        input: String,
+    },
 }
 
 fn main() {
