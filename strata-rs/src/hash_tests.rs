@@ -3,8 +3,8 @@ mod tests {
 
     #[test]
     fn hash_is_deterministic() {
-        use crate::value::Value;
         use crate::hash::hash_value;
+        use crate::value::Value;
 
         let value = Value::Int(42);
 
@@ -16,8 +16,8 @@ mod tests {
 
     #[test]
     fn hash_changes_on_value_change() {
-        use crate::value::Value;
         use crate::hash::hash_value;
+        use crate::value::Value;
 
         let value1 = Value::Int(42);
         let value2 = Value::Int(43);
@@ -30,8 +30,8 @@ mod tests {
 
     #[test]
     fn hash_respects_structure() {
-        use crate::value::Value;
         use crate::hash::hash_value;
+        use crate::value::Value;
 
         let list_a = Value::List(vec![Value::Int(1), Value::Int(2)]);
         let list_b = Value::List(vec![Value::Int(2), Value::Int(1)]);

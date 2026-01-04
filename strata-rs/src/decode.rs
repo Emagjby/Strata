@@ -55,7 +55,7 @@ impl<'a> Decoder<'a> {
             result |= value << shift;
 
             if (byte & 0x80) == 0 {
-                return Ok(result as u64);
+                return Ok(result);
             }
 
             shift += 7;

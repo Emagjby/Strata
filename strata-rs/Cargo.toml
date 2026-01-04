@@ -1,7 +1,18 @@
 [package]
-name = "strata"
-version = "0.2.1"
+name = "strata-rs"
+version = "0.3.0"
 edition = "2024"
+license = "MIT"
+description = "Deterministic binary data format with canonical encoding"
+repository = "https://github.com/Emagjby/Strata"
+readme = "README.md"
+
+[lib]
+name = "strata"
+
+[[bin]]
+name = "strata"
+path = "src/bin/strata.rs"
 
 [dependencies]
 blake3 = "1"

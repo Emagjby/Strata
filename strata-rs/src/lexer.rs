@@ -198,7 +198,7 @@ impl<'a> Lexer<'a> {
         let hex_len = self.offset - hex_start;
 
         // must have even number of hex digits and at least one byte
-        if hex_len == 0 || hex_len % 2 != 0 {
+        if hex_len == 0 || !hex_len.is_multiple_of(2) {
             return Err(self.error(ParseErrorKind::MalformedBytesLiteral));
         }
 
