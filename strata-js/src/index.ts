@@ -1,3 +1,10 @@
 // Strata JS entry point
 // Intentionally empty for now.
-export { };
+export { encodeValue } from "./encode.js";
+export { decodeValue } from "./decode.js";
+export { hashBytes as hashValue } from "./hash.js";
+export { parse } from "./parser.js";
+
+export * from "./value.js";
+export * from "./decode_error.js";
+export * from "./parse_error.js";
