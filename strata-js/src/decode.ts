@@ -46,6 +46,7 @@ class Decoder {
     decodeValue(): Value {
         const tagOffset = this.offset;
         const tag = this.readByte();
+        const payloadOffset = this.offset;
 
         switch (tag) {
             case TAG_NULL:
@@ -63,7 +64,7 @@ class Decoder {
                     this.offset = nextOffset;
                     return V.int(value);
                 } catch {
-                    throw new DecodeError({ type: "InvalidVarint" }, tagOffset);
+                    throw new DecodeError({ type: "InvalidVarint" }, payloadOffset);
                 }
             }
 
@@ -74,7 +75,7 @@ class Decoder {
                     len = result.value;
                     this.offset = result.nextOffset;
                 } catch {
-                    throw new DecodeError({ type: "InvalidVarint" }, tagOffset);
+                    throw new DecodeError({ type: "InvalidVarint" }, payloadOffset);
                 }
 
                 const start = this.offset;
@@ -84,7 +85,7 @@ class Decoder {
                     const str = td.decode(bytes);
                     return V.string(str);
                 } catch {
-                    throw new DecodeError({ type: "InvalidUTF8" }, start);
+                    throw new DecodeError({ type: "InvalidUtf8" }, start);
                 }
             }
 
@@ -95,7 +96,7 @@ class Decoder {
                     len = result.value;
                     this.offset = result.nextOffset;
                 } catch {
-                    throw new DecodeError({ type: "InvalidVarint" }, tagOffset);
+                    throw new DecodeError({ type: "InvalidVarint" }, payloadOffset);
                 }
 
                 const bytes = this.readSlice(Number(len));
@@ -110,7 +111,7 @@ class Decoder {
                     count = result.value;
                     this.offset = result.nextOffset;
                 } catch {
-                    throw new DecodeError({ type: "InvalidVarint" }, tagOffset);
+                    throw new DecodeError({ type: "InvalidVarint" }, payloadOffset);
                 }
 
                 const items: Value[] = [];
@@ -128,7 +129,7 @@ class Decoder {
                     count = result.value;
                     this.offset = result.nextOffset;
                 } catch {
-                    throw new DecodeError({ type: "InvalidVarint" }, tagOffset);
+                    throw new DecodeError({ type: "InvalidVarint" }, payloadOffset);
                 }
 
                 const map = new Map<string, Value>();

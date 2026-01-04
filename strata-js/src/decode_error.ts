@@ -2,7 +2,7 @@ export type DecodeErrorKind =
     | { type: "InvalidTag"; tag: number }
     | { type: "UnexpectedEOF" }
     | { type: "InvalidVarint" }
-    | { type: "InvalidUTF8" }
+    | { type: "InvalidUtf8" }
     | { type: "TrailingBytes" };
 
 export class DecodeError extends Error {
