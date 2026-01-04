@@ -8,11 +8,12 @@
     },
     "scripts": {
         "build": "tsc --noEmit",
-        "test": "node --test",
+        "test": "tsx --test",
         "check": "npm run build && npm run test"
     },
     "devDependencies": {
         "@types/node": "^25.0.3",
+        "tsx": "^4.21.0",
         "typescript": "^5.9.3"
     }
 }
