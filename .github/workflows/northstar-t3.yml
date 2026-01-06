@@ -39,4 +39,4 @@ jobs:
       - name: Run Northstar T3
         run: |
           cd northstar/T3-framed-wire/frontend-js
-          node t2.test.js
+          node t3.test.js
