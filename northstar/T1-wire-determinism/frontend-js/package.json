@@ -1,0 +1,6 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@emagjby/strata-js": "file:../../../strata-js/"
+  }
+}

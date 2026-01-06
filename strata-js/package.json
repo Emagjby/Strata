@@ -1,30 +1,30 @@
 {
-    "name": "@emagjby/strata-js",
-    "version": "0.3.1",
-    "type": "module",
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-        ".": "./dist/index.js"
-    },
-    "bin": {
-        "strata-js": "./dist/cli.js"
-    },
-    "files": [
-        "dist"
-    ],
-    "scripts": {
-        "build": "tsc",
-        "test": "tsx --test",
-        "check": "tsc --noEmit && npm run test",
-        "prepublishOnly": "npm run build"
-    },
-    "devDependencies": {
-        "@types/node": "^25.0.3",
-        "tsx": "^4.21.0",
-        "typescript": "^5.9.3"
-    },
-    "dependencies": {
-        "@noble/hashes": "^2.0.1"
-    }
+  "name": "@emagjby/strata-js",
+  "version": "0.3.1",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "bin": {
+    "strata-js": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "tsx --test",
+    "check": "tsc --noEmit && npm run test",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@noble/hashes": "^2.0.1"
+  }
 }
