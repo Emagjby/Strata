@@ -1,0 +1,10 @@
+[package]
+name = "t2-raw-wire-determinism"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+strata-rs = { path = "../../../strata-rs/" }
+tower-http = { version = "0.5", features = ["cors"] }
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
