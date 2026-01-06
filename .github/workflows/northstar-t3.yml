@@ -1,0 +1,42 @@
+name: Strata Northstar T3 CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  northstar-t3:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build backend
+        run: |
+          cd northstar/T3-framed-wire/backend-rs
+          cargo build
+
+      - name: Start backend
+        run: |
+          cd northstar/T3-framed-wire/backend-rs
+          cargo run &
+          sleep 2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install frontend deps
+        run: |
+          cd northstar/T3-framed-wire/frontend-js
+          npm install
+
+      - name: Run Northstar T3
+        run: |
+          cd northstar/T3-framed-wire/frontend-js
+          node t2.test.js
