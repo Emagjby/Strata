@@ -1,6 +1,6 @@
 {
   "type": "module",
   "dependencies": {
-    "@emagjby/strata-js": "file:../../../strata-js/"
+    "@emagjby/strata-js": "^0.3.1"
   }
 }
