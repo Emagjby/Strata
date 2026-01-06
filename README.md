@@ -84,7 +84,7 @@ As of v0.3.x, the following are frozen:
 
 Any change affecting bytes, hashes, or semantics requires a new minor version and a new Northstar.
 
-## Instalation
+## Installation
 
 Rust:
 
