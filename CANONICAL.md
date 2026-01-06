@@ -91,6 +91,26 @@ If two implementations hash different bytes for the same value, canonical rules 
 
 ---
 
+## Map Key Uniqueness
+
+Canonical Strata Maps contain **unique string keys only**.
+
+- Duplicate keys are **not representable** in canonical form.
+- Any duplicate keys present during parsing or construction are resolved
+  before encoding.
+- Encoding MUST NOT emit duplicate keys.
+
+Decoding MAY encounter duplicate keys in non-canonical input.
+In such cases, decoders:
+
+- MUST NOT panic
+- MAY preserve last-write-wins semantics for inspection
+- MUST NOT treat such data as canonical
+
+Duplicate keys are a property of malformed or hostile input, not canonical Strata.
+
+---
+
 ## Non-Goals
 
 Canonical encoding explicitly does not attempt to be:
