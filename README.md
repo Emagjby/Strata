@@ -104,3 +104,5 @@ Status: Stable
 
 Strata v0.3.x is considered production-ready for its defined scope.
 Future work may introduce verification or trust layers, but the core format is complete
+
+Documentation hosted with support from [GitBook](https://gitbook.com/) Community Plan.
