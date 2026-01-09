@@ -34,9 +34,9 @@ npm install -g @emagjby/strata-js
 import { parse, encodeValue, hashValueHex } from "@emagjby/strata-js";
 
 const source = `{
-  "name": "alice",
-  "active": true,
-  "count": 3
+  name: "alice"
+  active: true
+  count: 3
 }`;
 
 const value = parse(source);
