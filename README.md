@@ -4,6 +4,8 @@ _A deterministic binary data format with canonical encoding._
 
 Designed for stable hashing, cross-language determinism, and safe transport.
 
+[View the Documentation](https://strata.emagjby.com/docs)
+
 ## Why Strata exists
 
 Most data formats optimize for convenience.
