@@ -1,12 +1,14 @@
 {
   "name": "@emagjby/strata-js",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js"
   },
+  "license": "MIT",
+  "author": "Emagjby",
   "bin": {
     "strata-js": "./dist/cli.js"
   },

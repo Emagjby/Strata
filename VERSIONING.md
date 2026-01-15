@@ -1,8 +1,10 @@
 # Strata Versioning Policy
 
-This document defines how Strata versions evolve and what changes are permitted within a version line.
+This document defines how Strata versions evolve and what changes are permitted
+within a version line.
 
-Strata versioning prioritizes **correctness and determinism** over rapid iteration.
+Strata versioning prioritizes **correctness and determinism**
+over rapid iteration or convenience.
 
 ---
 
@@ -15,14 +17,16 @@ vMAJOR.MINOR.PATCH
 ```
 
 - **MAJOR**: Reserved for future use
-- **MINOR**: Canonical or semantic changes
-- **PATCH**: Non-breaking fixes and additions
+- **MINOR**: New invariant boundaries (canonical, semantic, or contractual)
+- **PATCH**: Non-breaking fixes and additions within an existing invariant
+
+Version numbers in Strata are **contract boundaries**, not cosmetics.
 
 ---
 
 ## v0.3.x Stability Contract
 
-As of **v0.3.x**, Strata’s core is considered **frozen**.
+As of **v0.3.x**, Strata’s core canonical model is considered **frozen**.
 
 The following are guaranteed stable across all v0.3.x releases:
 
@@ -55,14 +59,57 @@ PATCH releases must not change:
 
 ---
 
+## v0.4.x Stability Contract (DX Line)
+
+As of **v0.4.0**, Strata introduces a **DX-only minor version line**.
+
+v0.4.x explicitly guarantees:
+
+- Canonical encoding is unchanged from v0.3.x
+- Hashing semantics are unchanged
+- Value model is unchanged
+- Decode behavior is unchanged
+- Cross-language determinism is preserved
+
+The purpose of v0.4.x is to improve:
+
+- Developer ergonomics
+- Construction APIs and helpers
+- Documentation and integration clarity
+- Test coverage and enforcement
+
+No change in v0.4.x may alter canonical bytes or hashes.
+
+---
+
+## Allowed Changes in v0.4.x
+
+The following changes are allowed within v0.4.x:
+
+- Additive DX APIs (macros, helpers, factories)
+- Documentation additions and corrections
+- New tests and stronger enforcement
+- CLI UX improvements that do not affect output bytes
+- Refactors that preserve observable behavior
+
+PATCH releases within v0.4.x must not:
+
+- change encoded bytes
+- change hashes
+- relax or tighten decode rules
+- change value semantics
+
+---
+
 ## Changes That Require a New Minor Version
 
-Any of the following changes require a **new MINOR version** (e.g. v0.4.0) and a new Northstar:
+Any of the following changes require a **new MINOR version**
+(e.g. v0.5.0) and a new Northstar:
 
 - Changes to canonical encoding
 - Changes to hashing input or algorithm
 - Changes to the value model
-- Changes to integer, string, or map semantics
+- Changes to integer, string, bytes, list, or map semantics
 - Relaxing or tightening decode rules
 - Any change that alters encoded bytes for existing values
 
@@ -72,10 +119,10 @@ If bytes or hashes change, a minor version bump is mandatory.
 
 ## Northstar Requirement
 
-All breaking or semantic changes MUST be accompanied by:
+All changes that introduce new invariants MUST be accompanied by:
 
 - A new Northstar defining the invariant
-- CI enforcement of the new invariant
+- CI enforcement of the invariant
 - Explicit documentation of the change
 
 No canonical change is valid without a Northstar.
@@ -112,6 +159,8 @@ If a change feels small but alters bytes or hashes, it is **not small**.
 
 ## Stability Statement
 
-Strata v0.3.x is stable and frozen for its defined scope.
+- **v0.3.x** is canonically frozen for its defined scope
+- **v0.4.x** is a DX-only extension line with identical canonical guarantees
 
-Future versions may expand capabilities, but v0.3.x guarantees will not be weakened retroactively.
+Future versions may expand capabilities, but existing guarantees
+will not be weakened retroactively.

@@ -1,16 +1,51 @@
 # @emagjby/strata-js
 
-Deterministic Strata implementation for JavaScript.
+**Deterministic Strata implementation for JavaScript.**
 
-Strata is a deterministic binary data format with canonical encoding: identical logical values must produce identical bytes (and therefore identical hashes) across all implementations.
+This package is the **JavaScript parity implementation** of **Strata**.
 
-This package is a **parity implementation** with the Rust reference implementation. If Rust and JavaScript ever disagree, **that is a bug**.
+> Same data → same bytes → same hash.  
+> No ambiguity. No normalization. No silent coercions.
 
-- Canonical encoding: one value → one byte representation
-- Hashing: stable hash over canonical bytes (BLAKE3-256)
-- Strata Text (`.st`): human authoring format that compiles to canonical Strata Core Binary (`.scb`)
+If Rust and JavaScript ever disagree, **that is a bug**.
 
-Docs: https://strata.emagjby.com/docs
+---
+
+## What is Strata?
+
+Strata is a **strict, minimal data model** with a **fully deterministic binary encoding**.
+
+It is designed for systems where:
+
+- data integrity is non-negotiable
+- hashes must be stable forever
+- cross-language verification is required
+- ambiguity is unacceptable
+
+Strata draws a hard line between **representation** and **truth**:
+
+- `Value` is an in-memory representation
+- canonical `.scb` bytes define truth
+- hashes are computed only from canonical bytes
+
+---
+
+## What this package provides
+
+This package provides:
+
+- Canonical encoder for Strata Core Binary (`.scb`)
+- Safe decoder with explicit error semantics
+- Parser for Strata Text (`.st`)
+- Deterministic BLAKE3 hashing
+- CLI tooling (mirrors Rust CLI)
+- Golden vector enforcement
+- Behavioral parity with the Rust reference implementation
+
+This package does **not** define canonical truth.  
+The Rust implementation does.
+
+---
 
 ## Install
 
@@ -26,9 +61,11 @@ CLI:
 npm install -g @emagjby/strata-js
 ```
 
+---
+
 ## Quickstart (Library)
 
-### Parse Strata Text (`.st`) → encode (`.scb`) → hash
+### Parse `.st` → encode `.scb` → hash
 
 ```js
 import { parse, encodeValue, hashValueHex } from "@emagjby/strata-js";
@@ -40,38 +77,127 @@ const source = `{
 }`;
 
 const value = parse(source);
-const scb = encodeValue(value); // Uint8Array canonical bytes
+const scb = encodeValue(value); // Uint8Array (canonical bytes)
 
-// Hashing is defined over canonical bytes.
-console.log(hashValueHex(value));
+// Hashing is defined over canonical bytes
+console.log(hashValueHex(scb));
 ```
 
-### Decode `.scb` bytes back into a Strata value
+---
+
+### Decode `.scb` bytes back into a Value
 
 ```js
 import { decodeValue, encodeValue } from "@emagjby/strata-js";
 
-// Given canonical bytes (or bytes captured from storage/wire)
 const originalScb = new Uint8Array([0x00]); // example only
 
 const value = decodeValue(originalScb);
 const roundtrippedScb = encodeValue(value);
 
-// Strata guarantees: decode(encode(value)) == value
-// The reverse is intentionally NOT guaranteed.
+// Guaranteed: encode(decode(bytes)) === bytes
+// NOT guaranteed: decode(encode(value)) === value
 console.log(roundtrippedScb);
 ```
 
-### Hash a value (canonical re-encode)
+---
 
-If you already have a JS `Value` and want a canonical hash:
+### Hash an existing Value
 
 ```js
-import { hashValueHex, parse } from "@emagjby/strata-js";
+import { parse, encodeValue, hashValueHex } from "@emagjby/strata-js";
 
 const value = parse("[1, 2, 3]");
-console.log(hashValueHex(value));
+const bytes = encodeValue(value);
+
+console.log(hashValueHex(bytes));
 ```
+
+---
+
+## Constructing Values (JavaScript)
+
+The recommended construction API is the **`Value` factory**.
+
+The legacy alias `V` remains supported for backwards compatibility.
+
+```js
+import { Value } from "@emagjby/strata-js";
+
+const value = Value.mapOf(
+  ["id", Value.int(42n)],
+  ["name", Value.string("Gencho")],
+  ["active", Value.bool(true)],
+  ["skills", Value.listOf(Value.string("rust"), Value.string("systems"))],
+  [
+    "meta",
+    Value.mapOf(
+      ["a", Value.int(1n)],
+      ["a", Value.int(2n)], // last-write-wins
+    ),
+  ],
+);
+```
+
+Available helpers:
+
+- `Value.null()`
+- `Value.bool(boolean)`
+- `Value.int(bigint)` **(BigInt only)**
+- `Value.string(string)`
+- `Value.bytes(Uint8Array)`
+- `Value.list(Value[])`
+- `Value.map(Iterable<[string, Value]>)`
+
+DX helpers (additive):
+
+- `Value.listOf(...Value)`
+- `Value.mapObj({ [key]: Value })`
+- `Value.mapOf(...[string, Value])`
+- `Value.bytesFrom(Uint8Array | ArrayBuffer | number[] | Iterable<number>)`
+- `Value.bytesHex(hexString)` (strict hex)
+
+Duplicate map keys resolve via **last-write-wins**.
+
+---
+
+## JavaScript Value model (important)
+
+Strata values are **not JSON** and are intentionally strict.
+
+Rules:
+
+- Integers are `bigint` (JS `number` is rejected)
+- Bytes are `Uint8Array`
+- Maps are `ReadonlyMap<string, Value>`
+- No floats
+- No implicit conversions
+
+Type shape (abridged):
+
+- `{ kind: "null" }`
+- `{ kind: "bool", value: boolean }`
+- `{ kind: "int", value: bigint }`
+- `{ kind: "string", value: string }`
+- `{ kind: "bytes", value: Uint8Array }`
+- `{ kind: "list", value: readonly Value[] }`
+- `{ kind: "map", value: ReadonlyMap<string, Value> }`
+
+If you need JSON interoperability, you must define an **explicit mapping**.
+
+---
+
+## Canonical encoding & determinism
+
+- Encoding is fully deterministic
+- Map keys are sorted by UTF-8 byte order during encoding
+- Duplicate keys overwrite earlier entries (last-write-wins)
+- Hashing is defined over canonical `.scb` bytes
+
+If your system needs “mostly the same bytes”, Strata is not the tool.  
+If it needs **exactly the same bytes**, it is.
+
+---
 
 ## CLI
 
@@ -80,9 +206,9 @@ The `strata-js` CLI mirrors the Rust CLI.
 Commands:
 
 - `compile` – compile `.st` → canonical `.scb`
-- `decode` – decode `.scb` into a stable inspection format
-- `hash` – compute deterministic hash (BLAKE3-256)
-- `fmt` – parse `.st` and print a structured inspection format
+- `decode` – decode `.scb` for inspection
+- `hash` – compute deterministic hash
+- `fmt` – parse and pretty-print `.st`
 
 ### Compile
 
@@ -99,8 +225,8 @@ strata-js hash input.scb
 
 Behavior:
 
-- If input is `.st`, it is parsed and canonically encoded first
-- If input is `.scb`, bytes are hashed directly
+- `.st` is parsed and canonically encoded first
+- `.scb` bytes are hashed directly
 - Output is lowercase hex
 
 ### Decode
@@ -109,7 +235,7 @@ Behavior:
 strata-js decode input.scb
 ```
 
-### Fmt
+### Format
 
 ```bash
 strata-js fmt input.st
@@ -122,59 +248,59 @@ strata-js fmt input.st
 - `2` I/O failure
 - `100` internal error
 
-## JavaScript value model (important)
-
-Strata values in JS are **not JSON** and are intentionally strict.
-
-- Integers are `bigint` (JS `number` MUST NOT be used)
-- Bytes are `Uint8Array`
-- Maps are `ReadonlyMap<string, Value>`
-
-If you need to bridge into JSON:
-
-- `bigint` cannot be directly serialized by `JSON.stringify`
-- You must choose an explicit representation (commonly decimal strings)
-
-Type shape (abridged):
-
-- `{ kind: "null" }`
-- `{ kind: "bool", value: boolean }`
-- `{ kind: "int", value: bigint }`
-- `{ kind: "string", value: string }`
-- `{ kind: "bytes", value: Uint8Array }`
-- `{ kind: "list", value: readonly Value[] }`
-- `{ kind: "map", value: ReadonlyMap<string, Value> }`
-
-## Determinism notes
-
-- Hashing is defined over **canonical encoded bytes**, not decoded structures.
-- Decoding exists to inspect reality; encoding defines canonical truth.
-- Map keys are canonically ordered by UTF-8 byte order during encoding.
-
-If your system needs “mostly the same bytes”, Strata is not the tool. If it needs _exactly the same bytes_, it is.
+---
 
 ## Golden vectors
 
-Strata correctness is enforced via golden vectors (authored in `.st`) and cross-implementation tests.
+Correctness is enforced using **golden vectors** shared with the Rust implementation.
 
-Golden vectors are not examples; they are law:
+Golden vectors are law:
 
-- If this package disagrees with a golden vector, **the implementation is wrong**.
-- Vectors are not adjusted to match buggy behavior.
+- If this package disagrees with vectors, **this package is wrong**
+- Vectors are not adjusted to match buggy behavior
+
+---
 
 ## What Strata does NOT do
 
 Strata intentionally does not provide:
 
 - Schemas or validation rules
-- Optional fields or default values
+- Optional fields or defaults
 - Backward-compatible schema evolution
 - Floating point numbers
-- Streaming/framing rules (transport concerns are external)
+- Streaming or framing rules
 - Compression, encryption, or authentication
+
+---
+
+## Documentation
+
+Canonical integration documentation lives in the **Integration Reference**:
+
+https://strata.emagjby.com/docs
+
+This is the **single source of truth** for integrators.
+
+---
 
 ## Links
 
 - Documentation: https://strata.emagjby.com/docs
-- Repo: https://github.com/Emagjby/Strata
-- Strata JS package source: https://github.com/Emagjby/Strata/tree/main/strata-js
+- Monorepo: https://github.com/Emagjby/Strata
+- JS source: https://github.com/Emagjby/Strata/tree/main/strata-js
+
+---
+
+## License
+
+MIT License
+
+---
+
+## Final note
+
+This package is intentionally strict.
+
+If convenience matters more than correctness, use something else.  
+If correctness matters, this is the JavaScript implementation.

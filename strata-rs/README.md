@@ -2,25 +2,51 @@
 
 **Deterministic data language with canonical binary encoding.**
 
-This is the **reference Rust implementation** of **Strata**.
+This crate is the **reference Rust implementation** of **Strata**.
 
-Same data -> same bytes -> same hash.  
-No ambiguity. No normalization. No silent coercions.
+> Same data → same bytes → same hash.  
+> No ambiguity. No normalization. No silent coercions.
 
 Golden vectors are law.
+
+[View the Documentation](https://strata.emagjby.com/)
+
+---
+
+## What is Strata?
+
+Strata is a **strict, minimal data model** with a **fully deterministic binary encoding**.
+
+It is designed for systems where:
+
+- data integrity is non-negotiable
+- hashes must be stable forever
+- cross-language verification is required
+- ambiguity is unacceptable
+
+Strata draws a hard line between **representation** and **truth**:
+
+- `Value` is an in-memory representation
+- canonical `.scb` bytes define truth
+- hashes are computed only from canonical bytes
 
 ---
 
 ## What this crate provides
 
+This crate defines **canonical truth** for Strata.
+
+It provides:
+
 - Canonical encoder for Strata Core Binary (`.scb`)
-- Safe decoder with explicit error semantics
+- Safe decoder with explicit, structured errors
 - Parser for Strata Text (`.st`)
 - Deterministic BLAKE3 hashing
 - Production-grade CLI
 - Golden vector enforcement
+- Reference semantics for all other implementations
 
-This implementation defines **canonical truth** for all other languages.
+If another language disagrees with this crate, **the other language is wrong**.
 
 ---
 
@@ -39,28 +65,71 @@ strata-rs = "*"
 
 ---
 
-## Data model
+## Value model
 
-Strata supports a minimal, fixed value model:
+Strata supports a **fixed, closed value model**:
 
 ```text
 Value =
     Null
   | Bool(bool)
-  | Int(i64)
-  | String(String)
-  | Bytes(Vec<u8>)
-  | List(Vec<Value>)
-  | Map(BTreeMap<String, Value>)
+  | Int
+  | String
+  | Bytes
+  | List(Value*)
+  | Map(string → Value)
 ```
 
 Rules:
 
-- Integers are **signed 64-bit**
-- Strings are **UTF-8**
-- Map keys are **strings only**
+- Integers are explicit (no floats, no implicit coercions)
+- Strings are UTF-8
+- Map keys are strings only
+- Bytes are raw bytes
+- Duplicate map keys are allowed
 - No floats
-- No implicit conversions
+- No NaN
+- No normalization
+
+The model is intentionally small.  
+Power comes from determinism, not expressiveness.
+
+---
+
+## Constructing values (Rust)
+
+Values may be constructed manually or using **DX macros**.  
+Macros are **pure sugar** and do **not** affect canonical encoding or hashing.
+
+```rust
+use strata::value::Value;
+
+let value = map! {
+    "id" => int!(42),
+    "name" => string!("Gencho"),
+    "active" => bool!(true),
+    "skills" => list![
+        string!("rust"),
+        string!("systems"),
+    ],
+    "meta" => map! {
+        "a" => int!(1),
+        "a" => int!(2), // last-write-wins
+    },
+};
+```
+
+Available macros:
+
+- `null!()`
+- `bool!(...)`
+- `int!(...)`
+- `string!(...)`
+- `bytes!(...)`
+- `list![ ... ]`
+- `map!{ "k" => v, ... }`
+
+Macros construct the **exact same `Value` structures** as manual code.
 
 ---
 
@@ -68,26 +137,43 @@ Rules:
 
 Encoding is **fully deterministic**.
 
+Rules include:
+
 - Maps are sorted by UTF-8 byte order
-- Integers use canonical SLEB128
+- Integers use canonical varint encoding
 - Strings are stored as raw UTF-8 bytes
 - Bytes are preserved verbatim
+- Duplicate keys resolve via **last-write-wins**
 
 Identical values always produce identical `.scb` bytes.
+
+```rust
+use strata::encode::encode_value;
+
+let bytes = encode_value(&value)?;
+```
 
 ---
 
 ## Decoding guarantees
 
-The decoder:
+The decoder is **strict and transparent**.
+
+It:
 
 - Never panics on input
 - Rejects malformed data explicitly
-- Preserves non-canonical ordering
-- Allows duplicate keys (debug visibility)
+- Preserves observable structure
+- Allows duplicate keys for inspection
 
 Decoding reveals reality.  
 Encoding enforces truth.
+
+```rust
+use strata::decode::decode_value;
+
+let value = decode_value(&bytes)?;
+```
 
 ---
 
@@ -102,25 +188,23 @@ BLAKE3-256(canonical_scb_bytes)
 Example:
 
 ```rust
-use strata::hash::hash_value;
-use strata::value::Value;
+use strata::hash::hash_bytes;
 
-let value = Value::Int(42);
-let hash = hash_value(&value);
+let hash = hash_bytes(&bytes);
 ```
 
 Hashes are stable across:
 
-- Machines
-- Operating systems
-- Compiler versions
-- Programming languages
+- machines
+- operating systems
+- compiler versions
+- programming languages
 
 ---
 
 ## Parsing Strata Text (`.st`)
 
-Strata Text is a human-friendly authoring format.
+Strata Text is a **human-friendly authoring format**.
 
 Example:
 
@@ -130,7 +214,6 @@ user {
   name: "Gencho"
   active: true
   skills: ["rust", "systems"]
-  avatar_hash: 0x9f86d081884c7d659a2feaa0c55ad015
 }
 ```
 
@@ -142,11 +225,14 @@ use strata::parser::parse;
 let value = parse(source)?;
 ```
 
+Text is **never canonical**.  
+Only encoded `.scb` bytes are.
+
 ---
 
 ## CLI
 
-The Rust crate ships with a CLI.
+This crate ships with a CLI for inspection and tooling.
 
 ### Compile
 
@@ -177,7 +263,7 @@ strata fmt input.st
 
 ## Error model
 
-All failures are explicit and structured.
+All failures are **explicit and structured**.
 
 Decode errors include:
 
@@ -209,13 +295,27 @@ CLI exit codes:
 
 Canonical truth lives in `/vectors`.
 
-The Rust implementation:
+This implementation:
 
 - Must match vectors exactly
 - Must never change vectors to satisfy code
 - Must fail when vectors say so
 
-If Rust disagrees with vectors, **Rust is wrong**.
+If vectors disagree with code, **code is wrong**.
+
+---
+
+## Documentation
+
+Canonical integration documentation lives in the **Integration Reference**:
+
+- Value model
+- Encoding / decoding boundaries
+- Hashing contract
+- Rust and JavaScript examples
+- Strictness rules and footguns
+
+The Integration Reference is the **single source of truth** for integrators.
 
 ---
 
@@ -227,6 +327,7 @@ Strata evolution is governed by **Northstar documents**.
 - Northstar v2 – Decode & inspection
 - Northstar v2.1 – Explicit error semantics
 - Northstar v3 – Cross-language parity
+- Northstar v4 – Developer ergonomics & documentation
 
 Any canonical change requires a new Northstar.
 
@@ -244,10 +345,10 @@ This crate is intentionally strict.
 
 It is designed for:
 
-- Integrity-critical systems
-- Deterministic pipelines
-- Cross-language verification
-- Audit-friendly storage
+- integrity-critical systems
+- deterministic pipelines
+- cross-language verification
+- audit-friendly storage
 
 If convenience matters more than correctness, use something else.  
 If correctness matters, this is the reference.
