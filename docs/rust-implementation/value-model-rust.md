@@ -7,8 +7,6 @@ Every value that can exist in Strata must map _exactly_ to one of these variants
 
 There are no extension hooks, no dynamic typing, and no implicit conversions.
 
-
-
 ***
 
 ### Core principle
@@ -21,8 +19,6 @@ The value model exists to guarantee that:
 * Every value behaves identically across languages
 
 If a concept cannot be represented deterministically, it does not belong here.
-
-
 
 ***
 
@@ -42,7 +38,68 @@ This set is **fixed per version**.
 
 No additional variants may be introduced without a new version boundary.
 
+***
 
+### Constructing Values (macros)
+
+Rust provides additive construction macros for building `Value` trees.
+
+These macros are pure ergonomics:
+
+* They construct the same `Value` structures as manual `Value::...` construction
+* They do **not** change canonical encoding, hashing, or value semantics
+
+#### Macro mapping
+
+* `null!()` → `Value::Null`
+* `bool!(true)` → `Value::Bool`
+* `int!(...)` → `Value::Int`
+* `string!(...)` → `Value::String`
+* `bytes!(...)` → `Value::Bytes`
+* `list![ ... ]` → `Value::List`
+* `map!{ "k" => v, ... }` → `Value::Map`
+
+#### `map!` rules
+
+* Keys **must** be string literals.
+* Duplicate keys are allowed.
+* Duplicate keys are resolved with **last-write-wins** semantics.
+
+#### Examples
+
+**Simple scalar values**
+
+```
+let a = null!();
+let b = bool!(true);
+let n = int!(-42);
+let s = string!("strata");
+let raw = bytes!(vec![0xde, 0xad, 0xbe, 0xef]);
+```
+
+**Nested list + map construction**
+
+```
+let v = map!{
+    "user" => map!{
+        "id" => int!(42),
+        "name" => string!("Ada"),
+    },
+    "tags" => list![string!("dx"), string!("v4")],
+};
+```
+
+**Duplicate keys (last-write-wins)**
+
+```
+let v = map!{
+    "k" => int!(1),
+    "k" => int!(2),
+};
+
+// Equivalent final value:
+let v2 = map!{ "k" => int!(2) };
+```
 
 ***
 
@@ -58,8 +115,6 @@ Properties:
 
 Null is distinct from false, zero, empty string, or empty list.
 
-
-
 ***
 
 ### Bool
@@ -73,8 +128,6 @@ Properties:
 * No truthy or falsy coercion
 
 Boolean values are never inferred or auto-converted.
-
-
 
 ***
 
@@ -96,8 +149,6 @@ If a number does not fit into a signed 64-bit range, it is rejected.
 
 This rule is non-negotiable and enforced at parse time.
 
-
-
 ***
 
 ### String
@@ -116,8 +167,6 @@ Strings must be valid UTF-8 at all times.
 
 Invalid UTF-8 is rejected during decoding.
 
-
-
 ***
 
 ### Bytes
@@ -134,8 +183,6 @@ Properties:
 Bytes are preserved exactly as provided.
 
 This type exists explicitly to avoid abusing strings for binary data.
-
-
 
 ***
 
@@ -154,8 +201,6 @@ Lists preserve insertion order exactly.
 
 Reordering a list changes the canonical encoding and hash.
 
-
-
 ***
 
 ### Map
@@ -173,7 +218,27 @@ Maps enforce ordering during encoding, not during parsing.
 
 Duplicate keys are resolved by last-write-wins at parse time.
 
+***
 
+### Strictness & Footguns
+
+#### Integers are strict
+
+`int!(...)` constructs a `Value::Int` with the same signed 64-bit constraints as the rest of Strata.
+
+There is no float support and no implicit numeric conversion.
+
+#### Bytes are strict
+
+`bytes!(...)` constructs a `Value::Bytes`.
+
+Bytes are raw and opaque. Do not use strings for binary payloads.
+
+#### Duplicate map keys overwrite
+
+Strata parsers and constructors resolve duplicate keys using last-write-wins.
+
+This preserves deterministic behavior while still letting you inspect non-canonical inputs.
 
 ***
 
@@ -191,8 +256,6 @@ Each excluded feature introduces ambiguity or instability at the byte level.
 
 Strata chooses determinism over convenience.
 
-
-
 ***
 
 ### Cross-language implications
@@ -206,8 +269,6 @@ Every non-Rust implementation must:
 
 If a language cannot represent this model faithfully, it cannot implement Strata correctly.
 
-
-
 ***
 
 ### Stability guarantee
@@ -219,8 +280,6 @@ Once a Strata version is finalized:
 * Existing values must encode identically forever
 
 New concepts must be added in new versions, never retroactively.
-
-
 
 ***
 

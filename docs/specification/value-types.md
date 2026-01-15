@@ -6,8 +6,6 @@ The value model is intentionally minimal. Every type exists because it can be en
 
 If a type introduces ambiguity, it does not belong in the core.
 
-
-
 ***
 
 ### Overview
@@ -31,8 +29,6 @@ There are:
 * no implicit defaults
 * no undefined behavior
 
-
-
 ***
 
 ### Null
@@ -52,8 +48,6 @@ Represents the explicit absence of a value.
 * No associated data
 * No alternative encodings
 
-
-
 ***
 
 ### Bool
@@ -71,8 +65,6 @@ Represents a boolean truth value.
 * Each value has a distinct tag
 * No numeric or textual coercion
 * No truthy / falsy semantics
-
-
 
 ***
 
@@ -100,8 +92,6 @@ Represents a signed integer.
 * No leading zeros
 * No multiple varint forms
 
-
-
 ***
 
 ### String
@@ -125,8 +115,6 @@ Represents textual data.
 * Invalid UTF-8 is rejected
 * Byte sequence is preserved exactly
 * Identical text always produces identical bytes\\
-
-
 
 ***
 
@@ -154,8 +142,6 @@ Represents raw binary data.
 * Bytes are preserved verbatim
 * No transformation or normalization
 
-
-
 ***
 
 ### List
@@ -175,8 +161,6 @@ Represents an ordered sequence of values.
 * Each element is encoded in sequence
 * No reordering or normalization
 
-
-
 ***
 
 ### Map
@@ -187,7 +171,7 @@ Represents key–value associations.
 **Key restrictions**
 
 * Keys must be strings
-* Keys must be unique
+* Canonical maps contain at most one entry per key
 
 **Properties**
 
@@ -197,10 +181,12 @@ Represents key–value associations.
 **Canonical guarantees**
 
 * Keys are sorted by UTF-8 byte order during encoding
-* Duplicate keys are rejected at encode time
+* Canonical encoding never contains duplicate keys
 * Exactly one canonical ordering exists
 
+Non-canonical inputs may contain duplicate keys.
 
+Parsers and decoders resolve duplicates using **last-write-wins** semantics before encoding.
 
 ***
 
@@ -217,8 +203,6 @@ There are:
 
 Every structure can be reduced to combinations of these primitives.
 
-
-
 ***
 
 ### Why the model is minimal
@@ -230,8 +214,6 @@ Each value type satisfies three conditions:
 3. It behaves identically across languages
 
 Types that violate any of these conditions are excluded from the core.
-
-
 
 ***
 
@@ -247,8 +229,6 @@ The value model does not attempt to represent:
 * domain-specific semantics
 
 Such concerns belong in **higher layers**, not in the canonical core.
-
-
 
 ***
 
@@ -267,8 +247,6 @@ Any modification to the value model requires:
 * a new version
 * a new Northstar invariant
 * explicit documentation
-
-
 
 ***
 

@@ -4,8 +4,6 @@ Strata uses **JavaScript `bigint`** to represent integers. This is not an optimi
 
 JavaScript `number` is explicitly rejected.
 
-
-
 ***
 
 ### Why BigInt is mandatory
@@ -28,8 +26,6 @@ Therefore: **All integers in Strata JS are `bigint`.**
 
 No exceptions.
 
-
-
 ***
 
 ### Integer domain
@@ -50,8 +46,6 @@ I64_MIN = -(1n << 63n) I64_MAX = (1n << 63n) - 1n
 
 Any value outside this range is rejected.
 
-
-
 ***
 
 ### Construction rules
@@ -59,7 +53,7 @@ Any value outside this range is rejected.
 Integers are constructed via the value factory.
 
 ```
-V.int(42n)
+Value.int(42n)
 ```
 
 Rules:
@@ -70,7 +64,7 @@ Rules:
 
 This fails fast by design.
 
-
+`V.int(...)` is still supported as an alias, but `Value` is the recommended name.
 
 ***
 
@@ -90,8 +84,6 @@ When parsing Strata Text:
 
 Rejected: 42.0 1e6 0xFF
 
-
-
 ***
 
 ### Encoding semantics
@@ -109,8 +101,6 @@ Int(1) → 0x10 0x01
 
 If two `bigint` values are equal, their encodings are identical.
 
-
-
 ***
 
 ### Decoding semantics
@@ -123,8 +113,6 @@ During decoding:
 * No silent truncation
 
 Decoded integers are always exact.
-
-
 
 ***
 
@@ -140,8 +128,6 @@ Strata stores integers. It does not compute with them.
 
 Any arithmetic happens outside the format.
 
-
-
 ***
 
 ### Comparison semantics
@@ -154,8 +140,6 @@ Equality is structural:
 
 There is no fuzzy comparison. There is no tolerance.
 
-
-
 ***
 
 ### Interop with JavaScript code
@@ -167,8 +151,6 @@ When integrating with JS code:
 * Be aware JSON cannot represent `bigint`
 
 Strata values are not JSON. Do not treat them as such.
-
-
 
 ***
 
@@ -184,8 +166,6 @@ Other types:
 
 BigInt is used surgically, not globally.
 
-
-
 ***
 
 ### Future evolution
@@ -197,8 +177,6 @@ If future Strata versions introduce new numeric types:
 * They will exist as new value kinds
 
 Canonical integers are frozen.
-
-
 
 ***
 

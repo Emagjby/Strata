@@ -7,8 +7,6 @@ Decoding reveals reality.
 
 The JavaScript decoder takes raw Strata Core Binary (`.scb`) bytes and reconstructs a structured `Value` while **preserving all semantic guarantees** and **rejecting malformed input explicitly**.
 
-
-
 ***
 
 ### Role of the decoder
@@ -25,8 +23,6 @@ It does **not**:
 * Rewrite structure
 
 If the bytes are wrong, decoding fails. If the bytes are non-canonical, decoding still succeeds, but the structure is preserved exactly.
-
-
 
 ***
 
@@ -47,8 +43,6 @@ This function:
 
 If any bytes remain after decoding, decoding fails.
 
-
-
 ***
 
 ### Decoder model
@@ -61,8 +55,6 @@ Internal state:
 * `input`: immutable byte buffer
 
 All reads advance the cursor. All errors report the exact offset where decoding failed.
-
-
 
 ***
 
@@ -82,8 +74,6 @@ The tag determines:
 
 Unknown tags are **fatal errors**.
 
-
-
 ***
 
 ### Primitive decoding
@@ -99,10 +89,8 @@ Tags:
 These values have no payload.
 
 ```
-return V.null() | V.bool(false) | V.bool(true)
+return Value.null() | Value.bool(false) | Value.bool(true)
 ```
-
-
 
 ***
 
@@ -125,8 +113,6 @@ decodeSLEB128(input, offset)
 ```
 
 Any malformed varint results in `InvalidVarint`.
-
-
 
 ***
 
@@ -152,8 +138,6 @@ string = TextDecoder(fatal=true).decode(bytes)
 
 UTF-8 failure produces `InvalidUtf8` at the byte offset where decoding started.
 
-
-
 ***
 
 ### Bytes decoding
@@ -171,10 +155,8 @@ Rules:
 * No transformation
 
 ```
-return V.bytes(bytes)
+return Value.bytes(bytes)
 ```
-
-
 
 ***
 
@@ -197,8 +179,6 @@ for i in 0..count: items.push(decodeValue())
 ```
 
 Truncated lists fail with `UnexpectedEOF`.
-
-
 
 ***
 
@@ -224,8 +204,6 @@ if key.kind !== "string" -> error value = decodeValue()
 
 Maps are stored in a `Map<string, Value>`.
 
-
-
 ***
 
 ### Duplicate keys
@@ -241,8 +219,6 @@ If a key appears multiple times:
 This is intentional and mirrors Rust behavior.
 
 Decoding shows reality. Encoding enforces rules.
-
-
 
 ***
 
@@ -261,8 +237,6 @@ This prevents:
 * Ambiguous inputs
 
 A valid `.scb` file encodes exactly one value.
-
-
 
 ***
 
@@ -285,8 +259,6 @@ Each error includes:
 
 No silent failures. No partial values.
 
-
-
 ***
 
 ### Canonical vs non-canonical input
@@ -306,8 +278,6 @@ This enables:
 
 Canonicality is enforced at **encode time**, not decode time.
 
-
-
 ***
 
 ### Relationship to Northstar tests
@@ -323,8 +293,6 @@ If decoding:
 Then wire determinism is broken.
 
 The decoder is therefore a **security boundary**.
-
-
 
 ***
 

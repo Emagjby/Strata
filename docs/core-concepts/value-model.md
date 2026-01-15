@@ -6,8 +6,6 @@ Every value type exists to support deterministic, canonical encoding. Anything t
 
 The value model is part of the protocol contract.
 
-
-
 ***
 
 ### Design principles
@@ -23,8 +21,6 @@ The Strata value model is designed to be:
 There are no implicit conversions. There is no undefined behavior. There are no implementation-dependent semantics.
 
 If a value exists, its encoding is fully defined.
-
-
 
 ***
 
@@ -42,8 +38,6 @@ Strata supports the following core value types:
 
 This set is closed within a version line.
 
-
-
 ***
 
 ### `null`
@@ -55,8 +49,6 @@ Represents the absence of a value.
 * Has no equivalent numeric or boolean meaning
 
 `null` is a value, not a placeholder.
-
-
 
 ***
 
@@ -70,8 +62,6 @@ Represents a boolean truth value.
 * No truthy or falsy semantics
 
 Boolean values are explicit.
-
-
 
 ***
 
@@ -87,8 +77,6 @@ Represents a signed integer.
 
 Integers are mathematical integers, not machine integers.
 
-
-
 ***
 
 ### `bytes`
@@ -101,8 +89,6 @@ Represents an arbitrary byte sequence.
 * No implicit text semantics
 
 Bytes are opaque by design.
-
-
 
 ***
 
@@ -119,8 +105,6 @@ Invalid UTF-8 is rejected.
 
 Strings are text, not byte containers.
 
-
-
 ***
 
 ### `list`
@@ -134,8 +118,6 @@ Represents an ordered sequence of values.
 
 Lists preserve structure exactly.
 
-
-
 ***
 
 ### `map`
@@ -145,11 +127,13 @@ Represents a key-value mapping.
 * Keys must be strings
 * Keys are sorted canonically by UTF-8 byte order
 * Values may be any Strata value
-* Duplicate keys are not permitted
+* Canonical maps cannot contain duplicate keys
+
+Non-canonical inputs may contain duplicate keys.
+
+Parsers and decoders resolve duplicates using **last-write-wins** semantics before re-encoding.
 
 Map ordering is deterministic and enforced.
-
-
 
 ***
 
@@ -162,8 +146,6 @@ Canonical ordering applies only to maps.
 * Locale, language, and collation rules are ignored
 
 This ensures cross-language determinism.
-
-
 
 ***
 
@@ -184,8 +166,6 @@ These features introduce ambiguity or hidden behavior.
 
 They may exist in higher layers, not in the core.
 
-
-
 ***
 
 ### No implicit coercions
@@ -199,8 +179,6 @@ Strata does not perform:
 
 Values are explicit and exact.
 
-
-
 ***
 
 ### Stability guarantees
@@ -212,8 +190,6 @@ The value model is frozen per version line.
 * New value types require a new version
 
 This guarantees that hashes and bytes remain stable indefinitely.
-
-
 
 ***
 
