@@ -7,7 +7,9 @@ import {
     encodeValue,
     decodeValue,
     hashValue,
+    fmt,
 } from "../index.js";
+import { FormatOptions } from "../fmt.js";
 import type { Value } from "../value.js";
 
 test("old factory API (V.*) still works (regression)", () => {
@@ -133,4 +135,20 @@ test("encode/hash stability: helper-built values match manual equivalents", () =
 
     // Optional roundtrip sanity
     assert.deepEqual(decodeValue(builtBytes), decodeValue(manualBytes));
+});
+
+test("fmt pretty formats decoded scb values", () => {
+    const value = FactoryValue.mapOf(
+        ["options", FactoryValue.string("test")],
+        ["clear", FactoryValue.listOf(FactoryValue.int(1n), FactoryValue.int(2n))],
+    );
+
+    const bytes = encodeValue(value);
+    const decoded = decodeValue(bytes);
+    const formatted = fmt(FormatOptions.PRETTY, decoded);
+
+    assert.ok(formatted.startsWith("{\n"));
+    assert.ok(formatted.includes("options: \"test\""));
+    assert.ok(formatted.includes("clear: [1, 2]"));
+    assert.ok(formatted.endsWith("}\n") || formatted.endsWith("}"));
 });

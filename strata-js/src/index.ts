@@ -4,6 +4,7 @@ export { encodeValue } from "./encode.js";
 export { decodeValue } from "./decode.js";
 export { hashValueHex, hashBytes as hashValue } from "./hash.js";
 export { parse } from "./parser.js";
+export { fmt } from "./fmt.js";
 
 export { Value, V } from "./value_factory.js";
 export { V as ValueFactory } from "./value_factory.js";

@@ -1,5 +1,5 @@
-use assert_cmd::Command;
 use assert_cmd::cargo_bin_cmd;
+use assert_cmd::Command;
 use predicates::prelude::*;
 use std::path::PathBuf;
 
@@ -9,7 +9,7 @@ fn strata() -> Command {
 
 fn temp_file(name: &str) -> PathBuf {
     let mut p = std::env::temp_dir();
-    p.push(format!("strata_test_{}", name));
+    p.push(format!("strata_test_{}_{}", std::process::id(), name));
     p
 }
 
@@ -127,5 +127,66 @@ mod tests {
             .unwrap();
 
         assert!(!output.status.success());
+    }
+
+    #[test]
+    fn cli_fmt_st_pretty() {
+        let input = temp_file("fmt_input.st");
+
+        fs::write(
+            &input,
+            r#"
+        user {
+            id: 1
+        }
+        "#,
+        )
+        .unwrap();
+
+        strata()
+            .args(["fmt", input.to_str().unwrap()])
+            .assert()
+            .success()
+            .stdout(predicate::str::contains("id"));
+    }
+
+    #[test]
+    fn cli_fmt_scb_pretty() {
+        let input = temp_file("fmt_input.scb");
+
+        // Int(1) -> canonical bytes
+        fs::write(&input, vec![0x10, 0x01]).unwrap();
+
+        strata()
+            .args(["fmt", input.to_str().unwrap()])
+            .assert()
+            .success()
+            .stdout(predicate::str::contains("1"));
+    }
+
+    #[test]
+    fn cli_fmt_ast() {
+        let input = temp_file("fmt_ast.scb");
+
+        fs::write(&input, vec![0x10, 0x01]).unwrap();
+
+        strata()
+            .args(["fmt", "--format", "ast", input.to_str().unwrap()])
+            .assert()
+            .success()
+            .stdout(predicate::str::contains("Int"));
+    }
+
+    #[test]
+    fn cli_fmt_invalid_format() {
+        let input = temp_file("fmt_invalid.scb");
+
+        fs::write(&input, vec![0x10, 0x01]).unwrap();
+
+        strata()
+            .args(["fmt", "--format", "invalid", input.to_str().unwrap()])
+            .assert()
+            .success()
+            .stderr(predicate::str::contains("unknown format option"));
     }
 }

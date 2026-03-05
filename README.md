@@ -73,13 +73,13 @@ This repository contains independent implementations that must agree byte-for-by
 
 - Reference implementation
 - Defines canonical truth
-- Full encoder, decoder, parser, and CLI
+- Full encoder, decoder, parser, formatter, and CLI
 - Golden vectors and Northstar enforcement
 
 ### JavaScript — `strata-js`
 
 - Parity implementation with Rust
-- Canonical encoding and hashing
+- Canonical encoding, hashing, and formatting
 - Shared golden vectors and CI enforcement
 - First-class DX APIs
 

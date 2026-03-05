@@ -3,6 +3,7 @@ use std::fs;
 
 use strata::decode::decode;
 use strata::encode::encode;
+use strata::fmt::{FormatOptions, fmt};
 use strata::parser::parse;
 
 #[derive(Parser)]
@@ -40,9 +41,12 @@ enum Commands {
         input: String,
     },
 
-    /// Format Strata source (.st) into a readable AST format
+    /// Format Strata bytecode (.scb) into a human-readable format (e.g., "pretty" (.st), "ast")
     Fmt {
-        /// Input Strata source file (.st)
+        /// Format options (e.g., "pretty", "ast")
+        #[arg(long)]
+        format: Option<String>,
+        /// Input Strata bytecode file (.scb)
         input: String,
     },
 }
@@ -89,19 +93,37 @@ fn run() -> Result<(), strata::error::StrataError> {
         }
         Commands::Decode { input } => {
             let bytecode = fs::read(&input).map_err(strata::error::StrataError::Io)?;
-
             let ast = decode(&bytecode)?;
 
             println!("{:#?}", ast);
 
             Ok(())
         }
-        Commands::Fmt { input } => {
-            let source_text = fs::read_to_string(&input).map_err(strata::error::StrataError::Io)?;
+        Commands::Fmt { input, format } => {
+            let bytecode = if input.ends_with(".st") {
+                let source_text =
+                    fs::read_to_string(&input).map_err(strata::error::StrataError::Io)?;
+                let ast = parse(&source_text)?;
+                encode(&ast)?
+            } else {
+                fs::read(&input).map_err(strata::error::StrataError::Io)?
+            };
 
-            let ast = parse(&source_text)?;
+            let options = match format.as_deref() {
+                Some("pretty") => FormatOptions::PRETTY,
+                Some("ast") => FormatOptions::AST,
+                Some(other) => {
+                    eprintln!("error: unknown format option '{}'", other);
+                    eprintln!("valid options are: 'pretty', 'ast'");
+                    return Ok(());
+                }
+                None => FormatOptions::PRETTY,
+            };
 
-            println!("{:#?}", ast);
+            let ast = decode(&bytecode)?;
+
+            let formatted = fmt(options, &ast);
+            println!("{}", formatted);
 
             Ok(())
         }

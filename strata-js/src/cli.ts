@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 import fs from "node:fs";
 import process from "node:process";
@@ -12,6 +12,7 @@ import { DecodeError } from "./decode_error.js";
 import { ParseError } from "./parse_error.js";
 
 import { inspectValue } from "./inspect.js";
+import { fmt, FormatOptions } from "./fmt.js";
 
 function exitOk(): never {
     process.exit(0);
@@ -71,10 +72,15 @@ function cmdHash(input: string): void {
     console.log(hex(hashed));
 }
 
-function cmdFmt(input: string): void {
-    const source = fs.readFileSync(input, "utf8");
-    const parsedValue = parse(source);
-    console.log(JSON.stringify(inspectValue(parsedValue), null, 2));
+function cmdFmt(
+    input: string,
+    options: FormatOptions = FormatOptions.PRETTY,
+): void {
+    const value = input.endsWith(".scb")
+        ? decodeValue(fs.readFileSync(input))
+        : parse(fs.readFileSync(input, "utf8"));
+    const formatted = fmt(options, value);
+    console.log(formatted);
 }
 
 function main(): void {
@@ -110,22 +116,44 @@ function main(): void {
         }
 
         case "fmt": {
-            if (args.length !== 1) {
-                exitInvalid("usage: strata-js fmt <input.st>");
+            if (args.length < 1 || args.length > 3)
+                return exitInvalid("usage: strata-js fmt [format] <input.st>");
+            if (args.length === 2) {
+                return exitInvalid(
+                    "usage: --format [type] must be provided if format is provided",
+                );
             }
-            cmdFmt(args[0]!);
+            if (args.length === 1) {
+                cmdFmt(args[0]!);
+                return exitOk();
+            }
+
+            if (args[0] !== "--format") {
+                return exitInvalid(
+                    "usage: first argument must be --format if format is provided",
+                );
+            }
+
+            if (args[1] !== "pretty" && args[1] !== "ast") {
+                return exitInvalid("usage: format type must be one of: pretty, ast");
+            }
+
+            const format =
+                args[1] === "pretty" ? FormatOptions.PRETTY : FormatOptions.AST;
+
+            cmdFmt(args[2]!, format);
             return exitOk();
         }
 
         case "--help": {
             console.log(`
-                Strata CLI (JavaScript)
+Strata CLI (JavaScript)
 
-                Commands:
-                  compile <input.st> <output.scb>
-                  decode <input.scb>
-                  hash <input.st|input.scb>
-                  fmt <input.st>
+Commands:
+  compile <input.st> <output.scb>
+  decode <input.scb>
+  hash <input.st|input.scb>
+  fmt [format] <input.st>
             `);
             process.exit(0);
         }
