@@ -42,6 +42,7 @@ It provides:
 - Safe decoder with explicit, structured errors
 - Parser for Strata Text (`.st`)
 - Deterministic BLAKE3 hashing
+- Deterministic formatting (`fmt`)
 - Production-grade CLI
 - Golden vector enforcement
 - Reference semantics for all other implementations
@@ -73,7 +74,7 @@ Strata supports a **fixed, closed value model**:
 Value =
     Null
   | Bool(bool)
-  | Int
+  | Int(i64)
   | String
   | Bytes
   | List(Value*)
@@ -82,7 +83,7 @@ Value =
 
 Rules:
 
-- Integers are explicit (no floats, no implicit coercions)
+- Integers are signed 64-bit (no floats, no implicit coercions)
 - Strings are UTF-8
 - Map keys are strings only
 - Bytes are raw bytes
@@ -148,9 +149,9 @@ Rules include:
 Identical values always produce identical `.scb` bytes.
 
 ```rust
-use strata::encode::encode_value;
+use strata::encode::encode;
 
-let bytes = encode_value(&value)?;
+let bytes = encode(&value)?;
 ```
 
 ---
@@ -170,9 +171,9 @@ Decoding reveals reality.
 Encoding enforces truth.
 
 ```rust
-use strata::decode::decode_value;
+use strata::decode::decode;
 
-let value = decode_value(&bytes)?;
+let value = decode(&bytes)?;
 ```
 
 ---
@@ -188,9 +189,9 @@ BLAKE3-256(canonical_scb_bytes)
 Example:
 
 ```rust
-use strata::hash::hash_bytes;
+use strata::hash::hash_value;
 
-let hash = hash_bytes(&bytes);
+let hash = hash_value(&value);
 ```
 
 Hashes are stable across:
@@ -257,6 +258,14 @@ strata hash input.scb
 
 ```bash
 strata fmt input.st
+strata fmt input.scb
+```
+
+Format options:
+
+```bash
+strata fmt --format pretty input.st
+strata fmt --format ast input.st
 ```
 
 ---

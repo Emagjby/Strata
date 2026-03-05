@@ -38,6 +38,7 @@ This package provides:
 - Safe decoder with explicit error semantics
 - Parser for Strata Text (`.st`)
 - Deterministic BLAKE3 hashing
+- Deterministic formatting (`fmt`)
 - CLI tooling (mirrors Rust CLI)
 - Golden vector enforcement
 - Behavioral parity with the Rust reference implementation
@@ -80,7 +81,7 @@ const value = parse(source);
 const scb = encodeValue(value); // Uint8Array (canonical bytes)
 
 // Hashing is defined over canonical bytes
-console.log(hashValueHex(scb));
+console.log(hashValueHex(value));
 ```
 
 ---
@@ -105,12 +106,10 @@ console.log(roundtrippedScb);
 ### Hash an existing Value
 
 ```js
-import { parse, encodeValue, hashValueHex } from "@emagjby/strata-js";
+import { parse, hashValueHex } from "@emagjby/strata-js";
 
 const value = parse("[1, 2, 3]");
-const bytes = encodeValue(value);
-
-console.log(hashValueHex(bytes));
+console.log(hashValueHex(value));
 ```
 
 ---
@@ -208,7 +207,7 @@ Commands:
 - `compile` – compile `.st` → canonical `.scb`
 - `decode` – decode `.scb` for inspection
 - `hash` – compute deterministic hash
-- `fmt` – parse and pretty-print `.st`
+- `fmt` – parse and pretty-print `.st` (or `.scb`)
 
 ### Compile
 
@@ -239,6 +238,14 @@ strata-js decode input.scb
 
 ```bash
 strata-js fmt input.st
+strata-js fmt input.scb
+```
+
+Format options:
+
+```bash
+strata-js fmt --format pretty input.st
+strata-js fmt --format ast input.st
 ```
 
 ### Exit codes
